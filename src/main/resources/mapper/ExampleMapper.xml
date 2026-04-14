@@ -1,0 +1,64 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.icecream.backend.mapper.ExampleMapper">
+
+    <!-- 结果映射配置示例（如果有实体类） -->
+    <!--
+    <resultMap id="exampleResultMap" type="com.icecream.backend.model.Example">
+        <id property="id" column="id"/>
+        <result property="name" column="name"/>
+        <result property="value" column="value"/>
+        <result property="createTime" column="create_time"/>
+        <result property="updateTime" column="update_time"/>
+    </resultMap>
+    -->
+
+    <!-- 根据ID查询示例数据 -->
+    <select id="countById" resultType="int">
+        SELECT COUNT(*)
+        FROM example_table
+        WHERE id = #{id}
+    </select>
+
+    <!-- 插入示例数据 -->
+    <insert id="insertExample">
+        INSERT INTO example_table (name, value, create_time)
+        VALUES (#{name}, #{value}, NOW())
+    </insert>
+
+    <!-- 更新示例数据 -->
+    <update id="updateValueById">
+        UPDATE example_table
+        SET value = #{value}, update_time = NOW()
+        WHERE id = #{id}
+    </update>
+
+    <!-- 删除示例数据 -->
+    <delete id="deleteById">
+        DELETE FROM example_table
+        WHERE id = #{id}
+    </delete>
+
+    <!-- 动态SQL示例 -->
+    <!--
+    <select id="findByCondition" resultMap="exampleResultMap">
+        SELECT * FROM example_table
+        <where>
+            <if test="name != null and name != ''">
+                AND name LIKE CONCAT('%', #{name}, '%')
+            </if>
+            <if test="value != null and value != ''">
+                AND value = #{value}
+            </if>
+            <if test="startTime != null">
+                AND create_time >= #{startTime}
+            </if>
+            <if test="endTime != null">
+                AND create_time <= #{endTime}
+            </if>
+        </where>
+        ORDER BY create_time DESC
+    </select>
+    -->
+
+</mapper>
