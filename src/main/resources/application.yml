@@ -1,0 +1,114 @@
+# 应用程序基础配置
+spring:
+  application:
+    name: icecreambackend
+
+  # 配置文件激活规则
+  profiles:
+    active: dev
+    group:
+      dev: dev
+      prod: prod
+      test: test
+
+  # Web服务器配置
+  servlet:
+    multipart:
+      max-file-size: 10MB
+      max-request-size: 10MB
+
+  # Redis缓存配置
+  cache:
+    type: redis
+    redis:
+      time-to-live: 60000
+      cache-null-values: false
+  data:
+    redis:
+      host: localhost
+      port: 6379
+      password:
+      timeout: 2000ms
+      lettuce:
+        pool:
+          max-active: 8
+          max-idle: 8
+          min-idle: 0
+
+# MyBatis配置
+mybatis:
+  # XML映射文件位置
+  mapper-locations: classpath:mapper/**/*.xml
+  # 实体类别名扫描包
+  type-aliases-package: com.icecream.backend.model
+  # 配置属性
+  configuration:
+    # 驼峰命名自动映射
+    map-underscore-to-camel-case: true
+    # 日志实现（开发环境可开启）
+    log-impl: org.apache.ibatis.logging.stdout.StdOutImpl
+  # 全局配置
+  global-config:
+    db-config:
+      # 主键类型：自增
+      id-type: auto
+
+# PageHelper分页插件配置
+pagehelper:
+  helper-dialect: mysql
+  reasonable: true
+  support-methods-arguments: true
+  params: count=countSql
+
+# 应用服务配置
+server:
+  port: 8080
+  servlet:
+    context-path: /
+    encoding:
+      charset: UTF-8
+      enabled: true
+
+# Spring Security配置（基础）
+security:
+  basic:
+    enabled: false
+
+# Actuator监控端点配置
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info,metrics,loggers
+      base-path: /actuator
+  endpoint:
+    health:
+      show-details: always
+      probes:
+        enabled: true
+
+# SpringDoc OpenAPI配置
+springdoc:
+  api-docs:
+    path: /v3/api-docs
+  swagger-ui:
+    path: /swagger-ui.html
+    operations-sorter: method
+    tags-sorter: alpha
+  packages-to-scan: com.icecream.backend.controller
+  default-consumes-media-type: application/json
+  default-produces-media-type: application/json
+
+# 日志配置
+logging:
+  level:
+    com.icecream.backend: DEBUG
+    org.springframework.web: INFO
+    org.springframework.security: DEBUG
+    org.mybatis: DEBUG
+  pattern:
+    console: "%d{yyyy-MM-dd HH:mm:ss} - %msg%n"
+    file: "%d{yyyy-MM-dd HH:mm:ss} [%thread] %-5level %logger{36} - %msg%n"
+  file:
+    name: logs/application.log
+
