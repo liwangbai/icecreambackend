@@ -25,9 +25,9 @@ spring:
         dialect: org.hibernate.dialect.MySQL8Dialect
         jdbc:
           batch_size: 50
+          batch_versioned_data: true
         order_inserts: true
         order_updates: true
-        jdbc.batch_versioned_data: true
     show-sql: false
 
   # Redis生产配置
@@ -84,9 +84,6 @@ logging:
     max-size: 10MB
     max-history: 30
     total-size-cap: 1GB
-  logback:
-    rollingpolicy:
-      max-file-size: 10MB
 
 # Actuator生产配置（安全限制）
 management:
