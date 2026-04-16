@@ -61,7 +61,7 @@ This is a Spring Boot 3.2.0 backend for an Android Ice Cream community applicati
 
 ### Technology Stack
 - **Java 17** with Spring Boot 3.2.0
-- **MySQL 8.0** primary database with MyBatis
+- **MySQL 8.1.0** primary database with MyBatis
 - **Redis** for caching (Spring Cache abstraction)
 - **Spring Security** with JWT authentication
 - **SpringDoc OpenAPI** for API documentation
@@ -99,7 +99,7 @@ The project follows standard Spring Boot layered architecture:
 ## Configuration
 
 ### Environment Profiles
-- `dev` - Default profile for local development (MySQL: root/root)
+- `dev` - Default profile for local development (MySQL: root/a123456789)
 - `prod` - Production configuration (uses environment variables)
 - `test` - Test environment
 
@@ -145,7 +145,7 @@ API documentation is automatically generated from Spring controllers using Sprin
 ## Docker Deployment
 
 ### Container Architecture
-- `mysql:8.0` - MySQL database
+- `mysql:8.1.0` - MySQL database
 - `redis:7-alpine` - Redis cache
 - Custom Spring Boot application container
 
