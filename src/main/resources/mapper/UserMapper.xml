@@ -1,0 +1,197 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.icecream.backend.mapper.UserMapper">
+
+    <!-- 用户结果映射 -->
+    <resultMap id="userResultMap" type="com.icecream.backend.model.User">
+        <id property="id" column="id"/>
+        <result property="username" column="username"/>
+        <result property="email" column="email"/>
+        <result property="passwordHash" column="password_hash"/>
+        <result property="nickname" column="nickname"/>
+        <result property="avatarUrl" column="avatar_url"/>
+        <result property="bio" column="bio"/>
+        <result property="gender" column="gender"/>
+        <result property="status" column="status"/>
+        <result property="role" column="role"/>
+        <result property="lastLoginAt" column="last_login_at"/>
+        <result property="postCount" column="post_count"/>
+        <result property="followerCount" column="follower_count"/>
+        <result property="followingCount" column="following_count"/>
+        <result property="createdAt" column="created_at"/>
+        <result property="updatedAt" column="updated_at"/>
+    </resultMap>
+
+    <!-- ========== 基本CRUD操作 ========== -->
+
+    <!-- 根据ID查询用户 -->
+    <select id="findById" resultMap="userResultMap">
+        SELECT * FROM users
+        WHERE id = #{id}
+    </select>
+
+    <!-- 根据用户名查询用户 -->
+    <select id="findByUsername" resultMap="userResultMap">
+        SELECT * FROM users
+        WHERE username = #{username}
+    </select>
+
+    <!-- 根据邮箱查询用户 -->
+    <select id="findByEmail" resultMap="userResultMap">
+        SELECT * FROM users
+        WHERE email = #{email}
+    </select>
+
+    <!-- 查询所有用户 -->
+    <select id="findAll" resultMap="userResultMap">
+        SELECT * FROM users
+        ORDER BY id ASC
+    </select>
+
+    <!-- 插入新用户 -->
+    <insert id="insert" parameterType="com.icecream.backend.model.User" useGeneratedKeys="true" keyProperty="id">
+        INSERT INTO users (
+            username, email, password_hash, nickname, avatar_url, bio,
+            gender, status, role, last_login_at, post_count, follower_count, following_count
+        ) VALUES (
+            #{username}, #{email}, #{passwordHash}, #{nickname}, #{avatarUrl}, #{bio},
+            #{gender}, #{status}, #{role}, #{lastLoginAt}, #{postCount}, #{followerCount}, #{followingCount}
+        )
+    </insert>
+
+    <!-- 更新用户信息 -->
+    <update id="update" parameterType="com.icecream.backend.model.User">
+        UPDATE users
+        <set>
+            <if test="username != null">username = #{username},</if>
+            <if test="email != null">email = #{email},</if>
+            <if test="passwordHash != null">password_hash = #{passwordHash},</if>
+            <if test="nickname != null">nickname = #{nickname},</if>
+            <if test="avatarUrl != null">avatar_url = #{avatarUrl},</if>
+            <if test="bio != null">bio = #{bio},</if>
+            <if test="gender != null">gender = #{gender},</if>
+            <if test="status != null">status = #{status},</if>
+            <if test="role != null">role = #{role},</if>
+            <if test="lastLoginAt != null">last_login_at = #{lastLoginAt},</if>
+            <if test="postCount != null">post_count = #{postCount},</if>
+            <if test="followerCount != null">follower_count = #{followerCount},</if>
+            <if test="followingCount != null">following_count = #{followingCount},</if>
+            updated_at = NOW()
+        </set>
+        WHERE id = #{id}
+    </update>
+
+    <!-- 根据ID删除用户 -->
+    <delete id="delete">
+        DELETE FROM users
+        WHERE id = #{id}
+    </delete>
+
+    <!-- ========== 业务方法 ========== -->
+
+    <!-- 增加用户的发帖数 -->
+    <update id="incrementPostCount">
+        UPDATE users
+        SET post_count = post_count + 1,
+            updated_at = NOW()
+        WHERE id = #{userId}
+    </update>
+
+    <!-- 增加用户的粉丝数 -->
+    <update id="incrementFollowerCount">
+        UPDATE users
+        SET follower_count = follower_count + 1,
+            updated_at = NOW()
+        WHERE id = #{userId}
+    </update>
+
+    <!-- 增加用户的关注数 -->
+    <update id="incrementFollowingCount">
+        UPDATE users
+        SET following_count = following_count + 1,
+            updated_at = NOW()
+        WHERE id = #{userId}
+    </update>
+
+    <!-- 减少用户的粉丝数 -->
+    <update id="decrementFollowerCount">
+        UPDATE users
+        SET follower_count = GREATEST(follower_count - 1, 0),
+            updated_at = NOW()
+        WHERE id = #{userId}
+    </update>
+
+    <!-- 减少用户的关注数 -->
+    <update id="decrementFollowingCount">
+        UPDATE users
+        SET following_count = GREATEST(following_count - 1, 0),
+            updated_at = NOW()
+        WHERE id = #{userId}
+    </update>
+
+    <!-- 减少用户的发帖数 -->
+    <update id="decrementPostCount">
+        UPDATE users
+        SET post_count = GREATEST(post_count - 1, 0),
+            updated_at = NOW()
+        WHERE id = #{userId}
+    </update>
+
+    <!-- 更新用户最后登录时间 -->
+    <update id="updateLastLogin">
+        UPDATE users
+        SET last_login_at = NOW(),
+            updated_at = NOW()
+        WHERE id = #{userId}
+    </update>
+
+    <!-- ========== 关注相关操作 ========== -->
+
+    <!-- 检查关注关系是否存在 -->
+    <select id="existsFollow" resultType="boolean">
+        SELECT COUNT(*) > 0
+        FROM user_follows
+        WHERE follower_id = #{followerId}
+          AND following_id = #{followingId}
+    </select>
+
+    <!-- 添加关注关系 -->
+    <insert id="insertFollow">
+        INSERT IGNORE INTO user_follows (follower_id, following_id)
+        VALUES (#{followerId}, #{followingId})
+    </insert>
+
+    <!-- 删除关注关系 -->
+    <delete id="deleteFollow">
+        DELETE FROM user_follows
+        WHERE follower_id = #{followerId}
+          AND following_id = #{followingId}
+    </delete>
+
+    <!-- 查询用户的粉丝列表 -->
+    <select id="findFollowers" resultMap="userResultMap">
+        SELECT u.*
+        FROM users u
+        INNER JOIN user_follows uf ON u.id = uf.follower_id
+        WHERE uf.following_id = #{userId}
+        ORDER BY uf.created_at DESC
+    </select>
+
+    <!-- 查询用户的关注列表 -->
+    <select id="findFollowing" resultMap="userResultMap">
+        SELECT u.*
+        FROM users u
+        INNER JOIN user_follows uf ON u.id = uf.following_id
+        WHERE uf.follower_id = #{userId}
+        ORDER BY uf.created_at DESC
+    </select>
+
+    <!-- 根据用户名或邮箱查询用户（用于登录） -->
+    <select id="findByUsernameOrEmail" resultMap="userResultMap">
+        SELECT * FROM users
+        WHERE username = #{usernameOrEmail}
+           OR email = #{usernameOrEmail}
+        LIMIT 1
+    </select>
+
+</mapper>
