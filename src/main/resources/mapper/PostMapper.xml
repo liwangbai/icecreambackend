@@ -1,0 +1,314 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.icecream.backend.mapper.PostMapper">
+
+    <!-- ========== 结果映射定义 ========== -->
+
+    <!-- 基础帖子结果映射，包含帖子基本字段 -->
+    <resultMap id="postResultMap" type="com.icecream.backend.model.Post">
+        <id property="id" column="id"/>
+        <result property="userId" column="user_id"/>
+        <result property="title" column="title"/>
+        <result property="content" column="content"/>
+        <result property="summary" column="summary"/>
+        <result property="coverImageUrl" column="cover_image_url"/>
+        <result property="viewCount" column="view_count"/>
+        <result property="likeCount" column="like_count"/>
+        <result property="commentCount" column="comment_count"/>
+        <result property="status" column="status"/>
+        <result property="visibility" column="visibility"/>
+        <result property="isTop" column="is_top"/>
+        <result property="publishedAt" column="published_at"/>
+        <result property="createdAt" column="created_at"/>
+        <result property="updatedAt" column="updated_at"/>
+    </resultMap>
+
+    <!-- 帖子详情结果映射，包含作者信息 -->
+    <resultMap id="postDetailResultMap" type="com.icecream.backend.model.Post" extends="postResultMap">
+        <!-- 关联作者信息 -->
+        <association property="author" javaType="com.icecream.backend.model.User">
+            <id property="id" column="author_id"/>
+            <result property="username" column="author_username"/>
+            <result property="nickname" column="author_nickname"/>
+            <result property="avatarUrl" column="author_avatar_url"/>
+            <result property="bio" column="author_bio"/>
+            <result property="postCount" column="author_post_count"/>
+            <result property="followerCount" column="author_follower_count"/>
+            <result property="followingCount" column="author_following_count"/>
+        </association>
+        <!-- 标签信息通过单独的查询加载 -->
+    </resultMap>
+
+    <!-- 帖子列表结果映射，包含作者基本信息和是否点赞 -->
+    <resultMap id="postListResultMap" type="com.icecream.backend.model.Post" extends="postResultMap">
+        <!-- 关联作者基本信息 -->
+        <association property="author" javaType="com.icecream.backend.model.User">
+            <id property="id" column="author_id"/>
+            <result property="username" column="author_username"/>
+            <result property="nickname" column="author_nickname"/>
+            <result property="avatarUrl" column="author_avatar_url"/>
+        </association>
+        <!-- 是否点赞字段 -->
+        <result property="liked" column="liked"/>
+    </resultMap>
+
+    <!-- ========== 基本CRUD操作 ========== -->
+
+    <!-- 根据ID查询帖子（基础信息） -->
+    <select id="findById" resultMap="postResultMap">
+        SELECT * FROM posts
+        WHERE id = #{id}
+    </select>
+
+    <!-- 查询所有帖子（仅管理员使用） -->
+    <select id="findAll" resultMap="postResultMap">
+        SELECT * FROM posts
+        ORDER BY id ASC
+    </select>
+
+    <!-- 插入新帖子 -->
+    <insert id="insert" parameterType="com.icecream.backend.model.Post" useGeneratedKeys="true" keyProperty="id">
+        INSERT INTO posts (
+            user_id, title, content, summary, cover_image_url,
+            view_count, like_count, comment_count, status, visibility, is_top, published_at
+        ) VALUES (
+            #{userId}, #{title}, #{content}, #{summary}, #{coverImageUrl},
+            #{viewCount}, #{likeCount}, #{commentCount}, #{status}, #{visibility}, #{isTop}, #{publishedAt}
+        )
+    </insert>
+
+    <!-- 更新帖子信息 -->
+    <update id="update" parameterType="com.icecream.backend.model.Post">
+        UPDATE posts
+        <set>
+            <if test="title != null">title = #{title},</if>
+            <if test="content != null">content = #{content},</if>
+            <if test="summary != null">summary = #{summary},</if>
+            <if test="coverImageUrl != null">cover_image_url = #{coverImageUrl},</if>
+            <if test="viewCount != null">view_count = #{viewCount},</if>
+            <if test="likeCount != null">like_count = #{likeCount},</if>
+            <if test="commentCount != null">comment_count = #{commentCount},</if>
+            <if test="status != null">status = #{status},</if>
+            <if test="visibility != null">visibility = #{visibility},</if>
+            <if test="isTop != null">is_top = #{isTop},</if>
+            <if test="publishedAt != null">published_at = #{publishedAt},</if>
+            updated_at = NOW()
+        </set>
+        WHERE id = #{id}
+    </update>
+
+    <!-- 根据ID删除帖子 -->
+    <delete id="delete">
+        DELETE FROM posts
+        WHERE id = #{id}
+    </delete>
+
+    <!-- ========== 条件查询（基础查询） ========== -->
+
+    <!-- 根据条件查询帖子列表（支持分页） -->
+    <select id="findByCondition" parameterType="com.icecream.backend.dto.request.PostQueryRequest" resultMap="postListResultMap">
+        SELECT
+            p.*,
+            u.id as author_id,
+            u.username as author_username,
+            u.nickname as author_nickname,
+            u.avatar_url as author_avatar_url,
+            <!-- 判断当前用户是否点赞 -->
+            <if test="currentUserId != null">
+                CASE WHEN EXISTS (
+                    SELECT 1 FROM post_likes pl
+                    WHERE pl.post_id = p.id AND pl.user_id = #{currentUserId}
+                ) THEN TRUE ELSE FALSE END as liked
+            </if>
+            <if test="currentUserId == null">
+                FALSE as liked
+            </if>
+        FROM posts p
+        INNER JOIN users u ON p.user_id = u.id
+        <where>
+            <!-- 基本筛选条件 -->
+            <if test="status != null">
+                AND p.status = #{status}
+            </if>
+            <if test="visibility != null">
+                AND p.visibility = #{visibility}
+            </if>
+            <if test="userId != null">
+                AND p.user_id = #{userId}
+            </if>
+            <!-- 标签筛选：如果指定了tagId，则只查询包含该标签的帖子 -->
+            <if test="tagId != null">
+                AND EXISTS (
+                    SELECT 1 FROM post_tags pt
+                    WHERE pt.post_id = p.id AND pt.tag_id = #{tagId}
+                )
+            </if>
+        </where>
+        <!-- 排序 -->
+        <choose>
+            <when test="sortBy == 'viewCount'">
+                ORDER BY p.view_count ${sortDirection}
+            </when>
+            <when test="sortBy == 'likeCount'">
+                ORDER BY p.like_count ${sortDirection}
+            </when>
+            <when test="sortBy == 'publishedAt' or sortBy == null">
+                ORDER BY p.published_at ${sortDirection}
+            </when>
+            <otherwise>
+                ORDER BY p.published_at DESC
+            </otherwise>
+        </choose>
+        <!-- 分页：通过PageHelper插件实现，这里不需要LIMIT -->
+    </select>
+
+    <!-- 根据条件统计帖子数量 -->
+    <select id="countByCondition" parameterType="com.icecream.backend.dto.request.PostQueryRequest" resultType="long">
+        SELECT COUNT(*)
+        FROM posts p
+        <where>
+            <!-- 基本筛选条件 -->
+            <if test="status != null">
+                AND p.status = #{status}
+            </if>
+            <if test="visibility != null">
+                AND p.visibility = #{visibility}
+            </if>
+            <if test="userId != null">
+                AND p.user_id = #{userId}
+            </if>
+            <!-- 标签筛选 -->
+            <if test="tagId != null">
+                AND EXISTS (
+                    SELECT 1 FROM post_tags pt
+                    WHERE pt.post_id = p.id AND pt.tag_id = #{tagId}
+                )
+            </if>
+        </where>
+    </select>
+
+    <!-- ========== 业务方法 ========== -->
+
+    <!-- 增加帖子浏览数 -->
+    <update id="incrementViewCount">
+        UPDATE posts
+        SET view_count = view_count + 1,
+            updated_at = NOW()
+        WHERE id = #{postId}
+    </update>
+
+    <!-- 增加帖子点赞数 -->
+    <update id="incrementLikeCount">
+        UPDATE posts
+        SET like_count = like_count + 1,
+            updated_at = NOW()
+        WHERE id = #{postId}
+    </update>
+
+    <!-- 增加帖子评论数 -->
+    <update id="incrementCommentCount">
+        UPDATE posts
+        SET comment_count = comment_count + 1,
+            updated_at = NOW()
+        WHERE id = #{postId}
+    </update>
+
+    <!-- 减少帖子点赞数 -->
+    <update id="decrementLikeCount">
+        UPDATE posts
+        SET like_count = GREATEST(like_count - 1, 0),
+            updated_at = NOW()
+        WHERE id = #{postId}
+    </update>
+
+    <!-- 减少帖子评论数 -->
+    <update id="decrementCommentCount">
+        UPDATE posts
+        SET comment_count = GREATEST(comment_count - 1, 0),
+            updated_at = NOW()
+        WHERE id = #{postId}
+    </update>
+
+    <!-- ========== 用户相关查询 ========== -->
+
+    <!-- 根据用户ID查询帖子 -->
+    <select id="findByUserId" resultMap="postResultMap">
+        SELECT * FROM posts
+        WHERE user_id = #{userId}
+        <if test="status != null">
+            AND status = #{status}
+        </if>
+        ORDER BY published_at DESC
+    </select>
+
+    <!-- 查询用户关注的用户的帖子（时间线） -->
+    <select id="findFollowingPosts" resultMap="postListResultMap">
+        SELECT
+            p.*,
+            u.id as author_id,
+            u.username as author_username,
+            u.nickname as author_nickname,
+            u.avatar_url as author_avatar_url,
+            <!-- 判断当前用户是否点赞 -->
+            <if test="userId != null">
+                CASE WHEN EXISTS (
+                    SELECT 1 FROM post_likes pl
+                    WHERE pl.post_id = p.id AND pl.user_id = #{userId}
+                ) THEN TRUE ELSE FALSE END as liked
+            </if>
+            <if test="userId == null">
+                FALSE as liked
+            </if>
+        FROM posts p
+        INNER JOIN users u ON p.user_id = u.id
+        INNER JOIN user_follows uf ON u.id = uf.following_id
+        WHERE uf.follower_id = #{userId}
+          AND p.status = 1  <!-- 只查询已发布的帖子 -->
+          AND p.visibility = 1  <!-- 只查询公开的帖子 -->
+        ORDER BY p.published_at DESC
+    </select>
+
+    <!-- ========== 标签相关查询 ========== -->
+
+    <!-- 根据标签ID查询帖子 -->
+    <select id="findByTagId" resultMap="postListResultMap">
+        SELECT
+            p.*,
+            u.id as author_id,
+            u.username as author_username,
+            u.nickname as author_nickname,
+            u.avatar_url as author_avatar_url,
+            FALSE as liked  <!-- 标签查询默认不包含点赞信息 -->
+        FROM posts p
+        INNER JOIN users u ON p.user_id = u.id
+        INNER JOIN post_tags pt ON p.id = pt.post_id
+        WHERE pt.tag_id = #{tagId}
+          AND p.status = 1  <!-- 只查询已发布的帖子 -->
+          AND p.visibility = 1  <!-- 只查询公开的帖子 -->
+        ORDER BY p.published_at DESC
+    </select>
+
+    <!-- ========== 点赞相关查询 ========== -->
+
+    <!-- 检查用户是否点赞了帖子 -->
+    <select id="existsLike" resultType="boolean">
+        SELECT COUNT(*) > 0
+        FROM post_likes
+        WHERE user_id = #{userId}
+          AND post_id = #{postId}
+    </select>
+
+    <!-- 添加点赞记录 -->
+    <insert id="insertLike">
+        INSERT IGNORE INTO post_likes (user_id, post_id)
+        VALUES (#{userId}, #{postId})
+    </insert>
+
+    <!-- 删除点赞记录 -->
+    <delete id="deleteLike">
+        DELETE FROM post_likes
+        WHERE user_id = #{userId}
+          AND post_id = #{postId}
+    </delete>
+
+</mapper>
