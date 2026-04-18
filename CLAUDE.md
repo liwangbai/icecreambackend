@@ -194,3 +194,4 @@ Spring Boot Actuator provides:
 6. Add monitoring with Micrometer and Prometheus
 7. 本项目生成的代码，复杂或者难以理解的方法均需要加上中文注释
 8. 本项目生成的文档，均使用简体中文
+9. 接口更改需同步更改swagger文档

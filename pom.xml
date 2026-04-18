@@ -25,9 +25,9 @@
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
         <project.reporting.outputEncoding>UTF-8</project.reporting.outputEncoding>
         <spring-boot.version>3.2.0</spring-boot.version>
-        <jwt.version>0.12.3</jwt.version>
+        <jwt.version>0.11.5</jwt.version>
         <mapstruct.version>1.5.5.Final</mapstruct.version>
-        <lombok.version>1.18.30</lombok.version>
+        <lombok.version>1.18.38</lombok.version>
         <springdoc.version>2.3.0</springdoc.version>
         <pagehelper.version>1.4.7</pagehelper.version>
     </properties>
@@ -234,7 +234,12 @@
             <plugin>
                 <groupId>org.apache.maven.plugins</groupId>
                 <artifactId>maven-compiler-plugin</artifactId>
+                <version>3.13.0</version>
                 <configuration>
+                    <fork>true</fork>
+                    <compilerArgs>
+                        <arg>-J-Djdk.module.illegalAccess=permit</arg>
+                    </compilerArgs>
                     <annotationProcessorPaths>
                         <path>
                             <groupId>org.projectlombok</groupId>

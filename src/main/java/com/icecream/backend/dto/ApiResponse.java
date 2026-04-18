@@ -5,11 +5,12 @@ import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
+import lombok.experimental.SuperBuilder;
 
 import java.time.LocalDateTime;
 
 @Data
-@Builder
+@SuperBuilder
 @NoArgsConstructor
 @AllArgsConstructor
 @JsonInclude(JsonInclude.Include.NON_NULL)
@@ -45,8 +46,8 @@ public class ApiResponse<T> {
                 .build();
     }
 
-    public static ApiResponse<Void> error(String message) {
-        return ApiResponse.<Void>builder()
+    public static <T> ApiResponse<T> error(String message) {
+        return ApiResponse.<T>builder()
                 .success(false)
                 .message(message)
                 .timestamp(LocalDateTime.now())

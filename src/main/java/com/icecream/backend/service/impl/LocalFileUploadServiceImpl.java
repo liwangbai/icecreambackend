@@ -77,7 +77,7 @@ public class LocalFileUploadServiceImpl implements FileUploadService {
         }
 
         // 生成文件访问URL
-        String fileUrl = generateFileUrl(storedFilename, category, userId);
+        String fileUrl = getFileUrl(storedFilename, category, userId);
 
         // 构建响应
         FileUploadResponse response = FileUploadResponse.builder()

@@ -1,14 +1,18 @@
 package com.icecream.backend.service.impl;
 
+import com.icecream.backend.dto.FileUploadResponse;
 import com.icecream.backend.dto.request.UserUpdateRequest;
 import com.icecream.backend.mapper.UserMapper;
 import com.icecream.backend.model.User;
+import com.icecream.backend.service.FileUploadService;
 import com.icecream.backend.service.UserService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.web.multipart.MultipartFile;
 
+import java.io.IOException;
 import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Optional;
@@ -22,6 +26,7 @@ import java.util.Optional;
 public class UserServiceImpl implements UserService {
 
     private final UserMapper userMapper;
+    private final FileUploadService fileUploadService;
 
     @Override
     public User getCurrentUser(Long userId) {
@@ -177,5 +182,33 @@ public class UserServiceImpl implements UserService {
     public void updateLastLogin(Long userId) {
         log.debug("更新最后登录时间: userId={}", userId);
         userMapper.updateLastLogin(userId);
+    }
+
+    @Override
+    @Transactional
+    public String updateAvatar(Long userId, MultipartFile file) {
+        log.info("更新用户头像: userId={}", userId);
+
+        // 检查用户是否存在
+        Optional<User> userOpt = userMapper.findById(userId);
+        if (!userOpt.isPresent()) {
+            throw new RuntimeException("用户不存在");
+        }
+
+        try {
+            // 上传头像文件
+            FileUploadResponse uploadResponse = fileUploadService.uploadFile(file, "avatars", userId, "用户头像");
+
+            // 更新用户头像URL
+            User user = userOpt.get();
+            user.setAvatarUrl(uploadResponse.getFileUrl());
+            userMapper.update(user);
+
+            log.info("头像更新成功: userId={}, avatarUrl={}", userId, uploadResponse.getFileUrl());
+            return uploadResponse.getFileUrl();
+        } catch (IOException e) {
+            log.error("头像上传失败: userId={}, error={}", userId, e.getMessage());
+            throw new RuntimeException("头像上传失败: " + e.getMessage());
+        }
     }
 }

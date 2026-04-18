@@ -6,11 +6,15 @@ import com.icecream.backend.model.User;
 import com.icecream.backend.service.UserService;
 import com.icecream.backend.util.SecurityUtil;
 import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.web.multipart.MultipartFile;
 
 import jakarta.validation.Valid;
 import java.util.List;
@@ -95,6 +99,18 @@ public class UserController {
         log.debug("检查关注关系: followerId={}, followingId={}", currentUserId, userId);
         boolean isFollowing = userService.isFollowing(currentUserId, userId);
         return ResponseEntity.ok(ApiResponse.success("检查成功", isFollowing));
+    }
+
+    @PostMapping("/avatar")
+    @PreAuthorize("isAuthenticated()")
+    @Operation(summary = "修改用户头像", description = "上传并更新当前用户的头像")
+    public ResponseEntity<ApiResponse<String>> updateAvatar(
+            @Parameter(description = "头像文件", required = true)
+            @RequestParam("file") MultipartFile file) {
+        Long currentUserId = SecurityUtil.getCurrentUserId();
+        log.info("更新用户头像: userId={}", currentUserId);
+        String avatarUrl = userService.updateAvatar(currentUserId, file);
+        return ResponseEntity.ok(ApiResponse.success("头像更新成功", avatarUrl));
     }
 
 }

@@ -32,7 +32,7 @@ public class AuthController {
     @PostMapping("/register")
     @Operation(summary = "用户注册", description = "新用户注册接口，注册成功后返回JWT令牌")
     public ResponseEntity<ApiResponse<AuthResponse>> register(@Valid @RequestBody RegisterRequest request) {
-        log.info("用户注册: username={}", request.getUsername());
+        log.info("用户注册: phone={}", request.getPhone());
         AuthResponse response = authService.register(request);
         return ResponseEntity.ok(ApiResponse.success("注册成功", response));
     }
@@ -40,7 +40,7 @@ public class AuthController {
     @PostMapping("/login")
     @Operation(summary = "用户登录", description = "用户登录接口，登录成功后返回JWT令牌")
     public ResponseEntity<ApiResponse<AuthResponse>> login(@Valid @RequestBody LoginRequest request) {
-        log.info("用户登录: usernameOrEmail={}", request.getUsernameOrEmail());
+        log.info("用户登录: phone={}", request.getPhone());
         AuthResponse response = authService.login(request);
         return ResponseEntity.ok(ApiResponse.success("登录成功", response));
     }

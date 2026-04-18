@@ -181,7 +181,7 @@ class PostServiceImplTest {
             assertEquals("New post content", result.getContent());
             assertEquals(testUser, result.getAuthor());
             assertEquals(2, result.getTags().size());
-            assertFalse(result.isLiked());
+            assertFalse(result.getLiked());
 
             verify(tagMapper, times(2)).findById(anyLong());
             verify(postMapper).insert(any(Post.class));
@@ -267,7 +267,7 @@ class PostServiceImplTest {
             assertEquals(testUser, result.getAuthor());
             assertEquals(1, result.getTags().size());
             assertEquals("Java", result.getTags().get(0).getName());
-            assertTrue(result.isLiked());
+            assertTrue(result.getLiked());
 
             verify(postMapper).findById(1L);
             verify(postMapper).incrementViewCount(1L);
@@ -305,7 +305,7 @@ class PostServiceImplTest {
 
             // Assert
             assertNotNull(result);
-            assertFalse(result.isLiked()); // 未登录用户不应显示已点赞
+            assertFalse(result.getLiked()); // 未登录用户不应显示已点赞
 
             verify(postMapper).findById(1L);
             verify(postMapper).incrementViewCount(1L);
@@ -529,7 +529,7 @@ class PostServiceImplTest {
                 assertEquals(1L, result.get(0).getId());
                 assertEquals(testUser, result.get(0).getAuthor());
                 assertEquals(1, result.get(0).getTags().size());
-                assertTrue(result.get(0).isLiked());
+                assertTrue(result.get(0).getLiked());
 
                 pageHelperMock.verify(() -> PageHelper.startPage(1, 10));
                 verify(postMapper).findByCondition(queryRequest);
@@ -679,7 +679,7 @@ class PostServiceImplTest {
             assertEquals(1, result.size());
             assertEquals(1L, result.get(0).getId());
             assertNotNull(result.get(0).getAuthor());
-            assertTrue(result.get(0).isLiked());
+            assertTrue(result.get(0).getLiked());
 
             verify(postMapper).findByUserId(1L, 1);
             verify(userMapper).findById(1L);
@@ -703,7 +703,7 @@ class PostServiceImplTest {
             assertEquals(1, result.size());
             assertEquals(1L, result.get(0).getId());
             assertNotNull(result.get(0).getAuthor());
-            assertTrue(result.get(0).isLiked());
+            assertTrue(result.get(0).getLiked());
 
             verify(postMapper).findFollowingPosts(1L);
             verify(userMapper).findById(1L);
@@ -727,7 +727,7 @@ class PostServiceImplTest {
             assertEquals(1, result.size());
             assertEquals(1L, result.get(0).getId());
             assertNotNull(result.get(0).getAuthor());
-            assertFalse(result.get(0).isLiked());
+            assertFalse(result.get(0).getLiked());
 
             verify(postMapper).findByTagId(1L);
             verify(userMapper).findById(1L);

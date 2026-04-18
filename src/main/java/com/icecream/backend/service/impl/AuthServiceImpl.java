@@ -15,7 +15,8 @@ import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-import java.time.LocalDateTime;
+import com.icecream.backend.exception.ConflictException;
+import com.icecream.backend.exception.UnauthorizedException;
 import java.util.Date;
 import java.util.Optional;
 
@@ -36,26 +37,19 @@ public class AuthServiceImpl implements AuthService {
     @Override
     @Transactional
     public AuthResponse register(RegisterRequest request) {
-        log.info("用户注册: username={}", request.getUsername());
+        log.info("用户注册: phone={}", request.getPhone());
 
-        // 检查用户名是否已存在
-        Optional<User> existingUserByUsername = userMapper.findByUsername(request.getUsername());
+        // 检查用户名是否已存在（手机号作为账号存入username）
+        Optional<User> existingUserByUsername = userMapper.findByUsername(request.getPhone());
         if (existingUserByUsername.isPresent()) {
-            throw new RuntimeException("用户名已存在: " + request.getUsername());
-        }
-
-        // 检查邮箱是否已存在
-        Optional<User> existingUserByEmail = userMapper.findByEmail(request.getEmail());
-        if (existingUserByEmail.isPresent()) {
-            throw new RuntimeException("邮箱已存在: " + request.getEmail());
+            throw new ConflictException("该手机号已注册");
         }
 
         // 创建用户对象
         User user = new User();
-        user.setUsername(request.getUsername());
-        user.setEmail(request.getEmail());
+        user.setUsername(request.getPhone());
         user.setPasswordHash(passwordEncoder.encode(request.getPassword()));
-        user.setNickname(request.getNickname() != null ? request.getNickname() : request.getUsername());
+        user.setNickname("番薯" + request.getPhone().substring(request.getPhone().length() - 4));
         user.setAvatarUrl(null);
         user.setBio(null);
         user.setGender(0); // 默认未知
@@ -69,7 +63,7 @@ public class AuthServiceImpl implements AuthService {
         // 插入数据库
         userMapper.insert(user);
 
-        log.info("用户注册成功: userId={}, username={}", user.getId(), user.getUsername());
+        log.info("用户注册成功: userId={}, phone={}", user.getId(), request.getPhone());
 
         // 生成JWT令牌
         String accessToken = jwtTokenProvider.generateAccessToken(user.getUsername(), user.getRole());
@@ -95,19 +89,19 @@ public class AuthServiceImpl implements AuthService {
     @Override
     @Transactional
     public AuthResponse login(LoginRequest request) {
-        log.info("用户登录: usernameOrEmail={}", request.getUsernameOrEmail());
+        log.info("用户登录: phone={}", request.getPhone());
 
-        // 根据用户名或邮箱查找用户
-        Optional<User> userOpt = userMapper.findByUsernameOrEmail(request.getUsernameOrEmail());
+        // 根据手机号查找用户
+        Optional<User> userOpt = userMapper.findByUsername(request.getPhone());
         if (!userOpt.isPresent()) {
-            throw new RuntimeException("用户名或密码错误");
+            throw new UnauthorizedException("手机号或密码错误");
         }
 
         User user = userOpt.get();
 
         // 验证密码
         if (!passwordEncoder.matches(request.getPassword(), user.getPasswordHash())) {
-            throw new RuntimeException("用户名或密码错误");
+            throw new UnauthorizedException("手机号或密码错误");
         }
 
         // 检查用户状态

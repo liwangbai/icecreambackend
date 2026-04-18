@@ -254,7 +254,7 @@ class AuthServiceImplTest {
             when(tokenBlacklistService.isBlacklisted("refresh-token")).thenReturn(false);
             when(jwtTokenProvider.getUsernameFromToken("refresh-token")).thenReturn("testuser");
             when(userMapper.findByUsername("testuser")).thenReturn(Optional.of(testUser));
-            when(tokenBlacklistService.addToBlacklist(eq("refresh-token"), anyLong())).thenReturn(true);
+            doNothing().when(tokenBlacklistService).addToBlacklist(eq("refresh-token"), anyLong());
             when(jwtTokenProvider.generateAccessToken("testuser", "ROLE_USER")).thenReturn("new-access-token");
             when(jwtTokenProvider.generateRefreshToken("testuser")).thenReturn("new-refresh-token");
             when(jwtTokenProvider.getAccessTokenExpiration()).thenReturn(3600000L);

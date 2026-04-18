@@ -74,4 +74,12 @@ public interface UserService {
      * @param userId 用户ID
      */
     void updateLastLogin(Long userId);
+
+    /**
+     * 更新用户头像
+     * @param userId 用户ID
+     * @param file 头像文件
+     * @return 头像URL
+     */
+    String updateAvatar(Long userId, org.springframework.web.multipart.MultipartFile file);
 }

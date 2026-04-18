@@ -3,6 +3,8 @@ package com.icecream.backend.dto.request;
 import lombok.Data;
 
 import jakarta.validation.constraints.NotBlank;
+import jakarta.validation.constraints.Pattern;
+import jakarta.validation.constraints.Size;
 
 /**
  * 用户登录请求
@@ -10,10 +12,11 @@ import jakarta.validation.constraints.NotBlank;
 @Data
 public class LoginRequest {
     /**
-     * 用户名或邮箱
+     * 手机号
      */
-    @NotBlank(message = "用户名或邮箱不能为空")
-    private String usernameOrEmail;
+    @NotBlank(message = "手机号不能为空")
+    @Pattern(regexp = "^1[3-9]\\d{9}$", message = "手机号格式不正确")
+    private String phone;
 
     /**
      * 密码

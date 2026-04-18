@@ -74,7 +74,7 @@ public class FileUploadController {
             return ApiResponse.success("文件上传成功", response);
         } catch (IOException e) {
             log.error("文件上传失败: {}", e.getMessage(), e);
-            return ApiResponse.error("文件上传失败: " + e.getMessage());
+            return ApiResponse.<FileUploadResponse>error("文件上传失败: " + e.getMessage());
         }
     }
 
@@ -102,7 +102,7 @@ public class FileUploadController {
             return ApiResponse.success("头像上传成功", response);
         } catch (IOException e) {
             log.error("头像上传失败: {}", e.getMessage(), e);
-            return ApiResponse.error("头像上传失败: " + e.getMessage());
+            return ApiResponse.<FileUploadResponse>error("头像上传失败: " + e.getMessage());
         }
     }
 
@@ -134,7 +134,7 @@ public class FileUploadController {
             return ApiResponse.success("帖子图片上传成功", response);
         } catch (IOException e) {
             log.error("帖子图片上传失败: {}", e.getMessage(), e);
-            return ApiResponse.error("帖子图片上传失败: " + e.getMessage());
+            return ApiResponse.<FileUploadResponse>error("帖子图片上传失败: " + e.getMessage());
         }
     }
 
@@ -166,11 +166,11 @@ public class FileUploadController {
                 return ApiResponse.success("文件删除成功");
             } else {
                 log.warn("用户 {} 删除文件失败: {}, 分类: {}", userId, filename, category);
-                return ApiResponse.error("文件删除失败");
+                return ApiResponse.<Void>error("文件删除失败");
             }
         } catch (Exception e) {
             log.error("文件删除失败: {}", e.getMessage(), e);
-            return ApiResponse.error("文件删除失败: " + e.getMessage());
+            return ApiResponse.<Void>error("文件删除失败: " + e.getMessage());
         }
     }
 
@@ -201,7 +201,7 @@ public class FileUploadController {
             return ApiResponse.success(fileInfo);
         } catch (IOException e) {
             log.error("获取文件信息失败: {}", e.getMessage(), e);
-            return ApiResponse.error("获取文件信息失败: " + e.getMessage());
+            return ApiResponse.<FileInfo>error("获取文件信息失败: " + e.getMessage());
         }
     }
 
@@ -329,7 +329,7 @@ public class FileUploadController {
             return ApiResponse.success(exists);
         } catch (Exception e) {
             log.error("检查文件是否存在失败: {}", e.getMessage(), e);
-            return ApiResponse.error("检查文件是否存在失败: " + e.getMessage());
+            return ApiResponse.<Boolean>error("检查文件是否存在失败: " + e.getMessage());
         }
     }
 
@@ -351,7 +351,7 @@ public class FileUploadController {
 
         // 限制最多上传5个文件
         if (files.length > 5) {
-            return ApiResponse.error("最多只能上传5个文件");
+            return ApiResponse.<java.util.List<FileUploadResponse>>error("最多只能上传5个文件");
         }
 
         java.util.List<FileUploadResponse> responses = new java.util.ArrayList<>();

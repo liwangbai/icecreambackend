@@ -1,6 +1,7 @@
 package com.icecream.backend.controller;
 
 import com.icecream.backend.dto.ApiResponse;
+import com.icecream.backend.dto.PagedResult;
 import com.icecream.backend.dto.request.PostCreateRequest;
 import com.icecream.backend.dto.request.PostQueryRequest;
 import com.icecream.backend.dto.request.PostUpdateRequest;
@@ -71,7 +72,7 @@ public class PostController {
 
     @GetMapping
     @Operation(summary = "查询帖子列表", description = "查询帖子列表，支持分页、排序和多种筛选条件")
-    public ResponseEntity<ApiResponse<List<Post>>> queryPosts(
+    public ResponseEntity<ApiResponse<PagedResult<Post>>> queryPosts(
             @Parameter(description = "页码，从0开始") @RequestParam(required = false, defaultValue = "0") Integer page,
             @Parameter(description = "每页大小") @RequestParam(required = false, defaultValue = "10") Integer size,
             @Parameter(description = "用户ID筛选") @RequestParam(required = false) Long userId,
@@ -97,11 +98,8 @@ public class PostController {
         List<Post> posts = postService.queryPosts(query);
         long total = postService.countPosts(query);
 
-        ApiResponse<List<Post>> response = ApiResponse.success("查询成功", posts);
-        response.setTotal(total);
-        response.setPage(page);
-        response.setSize(size);
-
+        PagedResult<Post> pagedResult = PagedResult.of(posts, total, page, size);
+        ApiResponse<PagedResult<Post>> response = ApiResponse.success("查询成功", pagedResult);
         return ResponseEntity.ok(response);
     }
 

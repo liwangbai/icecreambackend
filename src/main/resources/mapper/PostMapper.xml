@@ -41,6 +41,8 @@
 
     <!-- 帖子列表结果映射，包含作者基本信息和是否点赞 -->
     <resultMap id="postListResultMap" type="com.icecream.backend.model.Post" extends="postResultMap">
+        <!-- 是否点赞字段 -->
+        <result property="liked" column="liked"/>
         <!-- 关联作者基本信息 -->
         <association property="author" javaType="com.icecream.backend.model.User">
             <id property="id" column="author_id"/>
@@ -48,8 +50,6 @@
             <result property="nickname" column="author_nickname"/>
             <result property="avatarUrl" column="author_avatar_url"/>
         </association>
-        <!-- 是否点赞字段 -->
-        <result property="liked" column="liked"/>
     </resultMap>
 
     <!-- ========== 基本CRUD操作 ========== -->

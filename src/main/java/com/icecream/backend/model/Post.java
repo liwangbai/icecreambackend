@@ -89,4 +89,11 @@ public class Post extends BaseEntity {
      * 当前用户是否点赞（需要当前用户ID上下文）
      */
     private Boolean liked;
+
+    /**
+     * 获取是否点赞（用于测试兼容性）
+     */
+    public boolean isLiked() {
+        return liked != null && liked;
+    }
 }
