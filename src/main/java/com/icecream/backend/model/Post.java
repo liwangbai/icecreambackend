@@ -81,6 +81,52 @@ public class Post extends BaseEntity {
     private User author;
 
     /**
+     * 门派，例：纯阳
+     */
+    private String faction;
+
+    /**
+     * 大区，例：电信区
+     */
+    private String region;
+
+    /**
+     * 服务器，例：双梦
+     */
+    private String server;
+
+    /**
+     * 体型，例：成男
+     */
+    private String bodyType;
+
+    /**
+     * 玩法，例：PVP
+     */
+    private String gameplay;
+
+    /**
+     * 寻找目标，例：队友
+     */
+    private String target;
+
+    /**
+     * 联系方式具体内容
+     */
+    private String contactDetail;
+
+    /**
+     * 图片链接列表（JSON格式存储）
+     */
+    private String imageUrls;
+
+    /**
+     * 图片链接列表（查询时从imageUrls JSON解析填充）
+     */
+    @EqualsAndHashCode.Exclude
+    private List<String> imageUrlList;
+
+    /**
      * 帖子标签列表
      */
     private List<Tag> tags;

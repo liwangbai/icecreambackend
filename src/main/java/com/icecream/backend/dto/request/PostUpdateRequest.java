@@ -19,37 +19,53 @@ public class PostUpdateRequest {
     /**
      * 帖子内容
      */
-    @Size(max = 10000, message = "帖子内容长度不能超过10000个字符")
+    @Size(max = 500, message = "帖子内容长度不能超过500个字符")
     private String content;
 
     /**
-     * 帖子摘要
+     * 门派
      */
-    @Size(max = 500, message = "帖子摘要长度不能超过500个字符")
-    private String summary;
+    @Size(max = 50, message = "门派长度不能超过50个字符")
+    private String faction;
 
     /**
-     * 封面图片URL
+     * 大区
      */
-    private String coverImageUrl;
+    @Size(max = 50, message = "大区长度不能超过50个字符")
+    private String region;
 
     /**
-     * 帖子状态：0-草稿，1-已发布，2-已删除
+     * 服务器
      */
-    private Integer status;
+    @Size(max = 50, message = "服务器长度不能超过50个字符")
+    private String server;
 
     /**
-     * 可见性：0-私密，1-公开
+     * 体型
      */
-    private Integer visibility;
+    @Size(max = 20, message = "体型长度不能超过20个字符")
+    private String bodyType;
 
     /**
-     * 是否置顶
+     * 玩法
      */
-    private Boolean isTop;
+    @Size(max = 50, message = "玩法长度不能超过50个字符")
+    private String gameplay;
 
     /**
-     * 标签ID列表（更新时重新设置所有标签）
+     * 寻找目标
      */
-    private List<Long> tagIds;
+    @Size(max = 100, message = "寻找目标长度不能超过100个字符")
+    private String target;
+
+    /**
+     * 联系方式
+     */
+    @Size(max = 200, message = "联系方式长度不能超过200个字符")
+    private String contactDetail;
+
+    /**
+     * 图片链接列表
+     */
+    private List<String> imageUrls;
 }

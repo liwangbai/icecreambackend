@@ -21,6 +21,14 @@
         <result property="publishedAt" column="published_at"/>
         <result property="createdAt" column="created_at"/>
         <result property="updatedAt" column="updated_at"/>
+        <result property="faction" column="faction"/>
+        <result property="region" column="region"/>
+        <result property="server" column="server"/>
+        <result property="bodyType" column="body_type"/>
+        <result property="gameplay" column="gameplay"/>
+        <result property="target" column="target"/>
+        <result property="contactDetail" column="contact_detail"/>
+        <result property="imageUrls" column="image_urls"/>
     </resultMap>
 
     <!-- 帖子详情结果映射，包含作者信息 -->
@@ -70,10 +78,12 @@
     <insert id="insert" parameterType="com.icecream.backend.model.Post" useGeneratedKeys="true" keyProperty="id">
         INSERT INTO posts (
             user_id, title, content, summary, cover_image_url,
-            view_count, like_count, comment_count, status, visibility, is_top, published_at
+            view_count, like_count, comment_count, status, visibility, is_top, published_at,
+            faction, region, server, body_type, gameplay, target, contact_detail, image_urls
         ) VALUES (
             #{userId}, #{title}, #{content}, #{summary}, #{coverImageUrl},
-            #{viewCount}, #{likeCount}, #{commentCount}, #{status}, #{visibility}, #{isTop}, #{publishedAt}
+            #{viewCount}, #{likeCount}, #{commentCount}, #{status}, #{visibility}, #{isTop}, #{publishedAt},
+            #{faction}, #{region}, #{server}, #{bodyType}, #{gameplay}, #{target}, #{contactDetail}, #{imageUrls}
         )
     </insert>
 
@@ -92,6 +102,14 @@
             <if test="visibility != null">visibility = #{visibility},</if>
             <if test="isTop != null">is_top = #{isTop},</if>
             <if test="publishedAt != null">published_at = #{publishedAt},</if>
+            <if test="faction != null">faction = #{faction},</if>
+            <if test="region != null">region = #{region},</if>
+            <if test="server != null">server = #{server},</if>
+            <if test="bodyType != null">body_type = #{bodyType},</if>
+            <if test="gameplay != null">gameplay = #{gameplay},</if>
+            <if test="target != null">target = #{target},</if>
+            <if test="contactDetail != null">contact_detail = #{contactDetail},</if>
+            <if test="imageUrls != null">image_urls = #{imageUrls},</if>
             updated_at = NOW()
         </set>
         WHERE id = #{id}

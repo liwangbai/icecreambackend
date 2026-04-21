@@ -3,7 +3,6 @@ package com.icecream.backend.dto.request;
 import lombok.Data;
 
 import jakarta.validation.constraints.NotBlank;
-import jakarta.validation.constraints.NotEmpty;
 import jakarta.validation.constraints.Size;
 import java.util.List;
 
@@ -13,48 +12,67 @@ import java.util.List;
 @Data
 public class PostCreateRequest {
     /**
-     * 帖子标题
+     * 帖子标题（选填）
      */
-    @NotBlank(message = "帖子标题不能为空")
     @Size(max = 200, message = "帖子标题长度不能超过200个字符")
     private String title;
 
     /**
-     * 帖子内容
+     * 帖子正文内容（必填）
      */
     @NotBlank(message = "帖子内容不能为空")
-    @Size(max = 10000, message = "帖子内容长度不能超过10000个字符")
+    @Size(max = 500, message = "帖子内容长度不能超过500个字符")
     private String content;
 
     /**
-     * 帖子摘要
+     * 门派（必填），例：纯阳
      */
-    @Size(max = 500, message = "帖子摘要长度不能超过500个字符")
-    private String summary;
+    @NotBlank(message = "门派不能为空")
+    @Size(max = 50, message = "门派长度不能超过50个字符")
+    private String faction;
 
     /**
-     * 封面图片URL
+     * 大区（必填），例：电信区
      */
-    private String coverImageUrl;
+    @NotBlank(message = "大区不能为空")
+    @Size(max = 50, message = "大区长度不能超过50个字符")
+    private String region;
 
     /**
-     * 帖子状态：0-草稿，1-已发布
+     * 服务器（必填），例：双梦
      */
-    private Integer status = 1;
+    @NotBlank(message = "服务器不能为空")
+    @Size(max = 50, message = "服务器长度不能超过50个字符")
+    private String server;
 
     /**
-     * 可见性：0-私密，1-公开
+     * 体型（必填），例：成男
      */
-    private Integer visibility = 1;
+    @NotBlank(message = "体型不能为空")
+    @Size(max = 20, message = "体型长度不能超过20个字符")
+    private String bodyType;
 
     /**
-     * 是否置顶
+     * 玩法（必填），例：PVP
      */
-    private Boolean isTop = false;
+    @NotBlank(message = "玩法不能为空")
+    @Size(max = 50, message = "玩法长度不能超过50个字符")
+    private String gameplay;
 
     /**
-     * 标签ID列表，帖子必须包含至少一个标签
+     * 寻找目标（选填），例：队友
      */
-    @NotEmpty(message = "帖子必须包含至少一个标签")
-    private List<Long> tagIds;
+    @Size(max = 100, message = "寻找目标长度不能超过100个字符")
+    private String target;
+
+    /**
+     * 联系方式具体内容（选填），若选择"无"，传空字符串""
+     */
+    @Size(max = 200, message = "联系方式长度不能超过200个字符")
+    private String contactDetail;
+
+    /**
+     * 图片链接列表（选填），若没有图片，传空列表[]或不传
+     */
+    private List<String> imageUrls;
 }

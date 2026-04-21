@@ -33,7 +33,7 @@ public class PostController {
     private final PostService postService;
 
     @PostMapping
-    @Operation(summary = "创建帖子", description = "创建新帖子，帖子必须包含至少一个标签")
+    @Operation(summary = "创建帖子", description = "创建新帖子，必填字段：content、faction、region、server、bodyType、gameplay")
     public ResponseEntity<ApiResponse<Post>> createPost(@Valid @RequestBody PostCreateRequest request) {
         Long currentUserId = SecurityUtil.getCurrentUserId();
         log.info("创建帖子: userId={}, title={}", currentUserId, request.getTitle());

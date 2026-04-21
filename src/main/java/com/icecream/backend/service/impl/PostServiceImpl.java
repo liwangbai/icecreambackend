@@ -4,21 +4,21 @@ import com.icecream.backend.dto.request.PostCreateRequest;
 import com.icecream.backend.dto.request.PostQueryRequest;
 import com.icecream.backend.dto.request.PostUpdateRequest;
 import com.icecream.backend.mapper.PostMapper;
-import com.icecream.backend.mapper.TagMapper;
 import com.icecream.backend.mapper.UserMapper;
 import com.icecream.backend.model.Post;
-import com.icecream.backend.model.Tag;
 import com.icecream.backend.model.User;
 import com.icecream.backend.service.PostService;
 import com.github.pagehelper.PageHelper;
-import com.github.pagehelper.PageInfo;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDateTime;
-import java.util.ArrayList;
+import com.icecream.backend.exception.ResourceNotFoundException;
+import com.icecream.backend.exception.ForbiddenException;
+import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import java.util.List;
 import java.util.Optional;
 
@@ -31,27 +31,38 @@ import java.util.Optional;
 public class PostServiceImpl implements PostService {
 
     private final PostMapper postMapper;
-    private final TagMapper tagMapper;
     private final UserMapper userMapper;
+    private final ObjectMapper objectMapper;
 
     @Override
     @Transactional
     public Post createPost(Long userId, PostCreateRequest request) {
-        log.info("创建帖子: userId={}, title={}", userId, request.getTitle());
-
-        // 验证标签是否存在
-        validateTags(request.getTagIds());
+        log.info("创建帖子: userId={}, content={}", userId, request.getContent());
 
         // 创建帖子对象
         Post post = new Post();
         post.setUserId(userId);
         post.setTitle(request.getTitle());
         post.setContent(request.getContent());
-        post.setSummary(request.getSummary());
-        post.setCoverImageUrl(request.getCoverImageUrl());
-        post.setStatus(request.getStatus());
-        post.setVisibility(request.getVisibility());
-        post.setIsTop(request.getIsTop());
+        post.setFaction(request.getFaction());
+        post.setRegion(request.getRegion());
+        post.setServer(request.getServer());
+        post.setBodyType(request.getBodyType());
+        post.setGameplay(request.getGameplay());
+        post.setTarget(request.getTarget());
+        post.setContactDetail(request.getContactDetail());
+        // 将图片列表转为JSON字符串存储
+        if (request.getImageUrls() != null && !request.getImageUrls().isEmpty()) {
+            try {
+                post.setImageUrls(objectMapper.writeValueAsString(request.getImageUrls()));
+            } catch (JsonProcessingException e) {
+                throw new RuntimeException("图片链接序列化失败");
+            }
+        }
+        // 设置默认值
+        post.setStatus(1);
+        post.setVisibility(1);
+        post.setIsTop(false);
         post.setViewCount(0);
         post.setLikeCount(0);
         post.setCommentCount(0);
@@ -61,16 +72,10 @@ public class PostServiceImpl implements PostService {
         postMapper.insert(post);
         log.info("帖子创建成功: postId={}", post.getId());
 
-        // 添加帖子标签关联
-        for (Long tagId : request.getTagIds()) {
-            tagMapper.insertPostTag(post.getId(), tagId);
-            tagMapper.incrementUseCount(tagId); // 增加标签使用次数
-        }
-
         // 更新用户的发帖数
         userMapper.incrementPostCount(userId);
 
-        // 返回创建的帖子（包含关联信息）
+        // 返回创建的帖子
         return getPostById(post.getId(), userId);
     }
 
@@ -82,7 +87,7 @@ public class PostServiceImpl implements PostService {
         // 查询帖子基础信息
         Optional<Post> postOpt = postMapper.findById(postId);
         if (!postOpt.isPresent()) {
-            throw new RuntimeException("帖子不存在: " + postId);
+            throw new ResourceNotFoundException("帖子不存在");
         }
 
         Post post = postOpt.get();
@@ -104,12 +109,11 @@ public class PostServiceImpl implements PostService {
         // 检查帖子是否存在且用户有权限
         Optional<Post> postOpt = postMapper.findById(postId);
         if (!postOpt.isPresent()) {
-            throw new RuntimeException("帖子不存在: " + postId);
+            throw new ResourceNotFoundException("帖子不存在");
         }
 
         Post post = postOpt.get();
         if (!post.getUserId().equals(userId)) {
-            // TODO: 检查是否为管理员
             throw new RuntimeException("没有权限更新此帖子");
         }
 
@@ -120,39 +124,37 @@ public class PostServiceImpl implements PostService {
         if (request.getContent() != null) {
             post.setContent(request.getContent());
         }
-        if (request.getSummary() != null) {
-            post.setSummary(request.getSummary());
+        if (request.getFaction() != null) {
+            post.setFaction(request.getFaction());
         }
-        if (request.getCoverImageUrl() != null) {
-            post.setCoverImageUrl(request.getCoverImageUrl());
+        if (request.getRegion() != null) {
+            post.setRegion(request.getRegion());
         }
-        if (request.getStatus() != null) {
-            post.setStatus(request.getStatus());
+        if (request.getServer() != null) {
+            post.setServer(request.getServer());
         }
-        if (request.getVisibility() != null) {
-            post.setVisibility(request.getVisibility());
+        if (request.getBodyType() != null) {
+            post.setBodyType(request.getBodyType());
         }
-        if (request.getIsTop() != null) {
-            post.setIsTop(request.getIsTop());
+        if (request.getGameplay() != null) {
+            post.setGameplay(request.getGameplay());
+        }
+        if (request.getTarget() != null) {
+            post.setTarget(request.getTarget());
+        }
+        if (request.getContactDetail() != null) {
+            post.setContactDetail(request.getContactDetail());
+        }
+        if (request.getImageUrls() != null) {
+            try {
+                post.setImageUrls(objectMapper.writeValueAsString(request.getImageUrls()));
+            } catch (JsonProcessingException e) {
+                throw new RuntimeException("图片链接序列化失败");
+            }
         }
 
         // 更新数据库
         postMapper.update(post);
-
-        // 如果提供了新的标签列表，更新标签关联
-        if (request.getTagIds() != null) {
-            // 验证新标签
-            validateTags(request.getTagIds());
-
-            // 删除旧的标签关联
-            tagMapper.deletePostTagsByPostId(postId);
-
-            // 添加新的标签关联
-            for (Long tagId : request.getTagIds()) {
-                tagMapper.insertPostTag(postId, tagId);
-                tagMapper.incrementUseCount(tagId);
-            }
-        }
 
         return getPostById(postId, userId);
     }
@@ -162,23 +164,17 @@ public class PostServiceImpl implements PostService {
     public void deletePost(Long postId, Long userId) {
         log.info("删除帖子: postId={}, userId={}", postId, userId);
 
-        // 检查帖子是否存在且用户有权限
         Optional<Post> postOpt = postMapper.findById(postId);
         if (!postOpt.isPresent()) {
-            throw new RuntimeException("帖子不存在: " + postId);
+            throw new ResourceNotFoundException("帖子不存在");
         }
 
         Post post = postOpt.get();
         if (!post.getUserId().equals(userId)) {
-            // TODO: 检查是否为管理员
-            throw new RuntimeException("没有权限删除此帖子");
+            throw new ForbiddenException("没有权限删除此帖子");
         }
 
-        // 删除帖子（物理删除或逻辑删除）
-        // 这里使用物理删除，实际项目中可能需要逻辑删除
         postMapper.delete(postId);
-
-        // 减少用户的发帖数
         userMapper.decrementPostCount(userId);
 
         log.info("帖子删除成功: postId={}", postId);
@@ -291,22 +287,6 @@ public class PostServiceImpl implements PostService {
     // ========== 私有方法 ==========
 
     /**
-     * 验证标签ID列表是否有效
-     */
-    private void validateTags(List<Long> tagIds) {
-        if (tagIds == null || tagIds.isEmpty()) {
-            throw new RuntimeException("帖子必须包含至少一个标签");
-        }
-
-        for (Long tagId : tagIds) {
-            Optional<Tag> tagOpt = tagMapper.findById(tagId);
-            if (!tagOpt.isPresent() || !tagOpt.get().getIsActive()) {
-                throw new RuntimeException("标签不存在或未启用: " + tagId);
-            }
-        }
-    }
-
-    /**
      * 丰富帖子信息（包含作者、标签等关联信息）
      */
     private void enrichPostWithAssociations(Post post, Long currentUserId) {
@@ -314,9 +294,15 @@ public class PostServiceImpl implements PostService {
         Optional<User> userOpt = userMapper.findById(post.getUserId());
         userOpt.ifPresent(post::setAuthor);
 
-        // 设置标签信息
-        List<Tag> tags = tagMapper.findTagsByPostId(post.getId());
-        post.setTags(tags);
+        // 将imageUrls从JSON字符串转为List
+        if (post.getImageUrls() != null && !post.getImageUrls().isEmpty()) {
+            try {
+                post.setImageUrlList(objectMapper.readValue(post.getImageUrls(),
+                    objectMapper.getTypeFactory().constructCollectionType(List.class, String.class)));
+            } catch (JsonProcessingException e) {
+                log.warn("解析图片链接失败: {}", post.getImageUrls());
+            }
+        }
 
         // 设置是否点赞
         if (currentUserId != null) {
