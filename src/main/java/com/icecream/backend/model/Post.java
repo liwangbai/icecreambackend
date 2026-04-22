@@ -143,6 +143,16 @@ public class Post extends BaseEntity {
     private Boolean liked;
 
     /**
+     * 当前用户是否关注了发帖人
+     */
+    private Boolean followed;
+
+    /**
+     * 发帖人是否关注了当前用户
+     */
+    private Boolean followMe;
+
+    /**
      * 获取是否点赞（用于测试兼容性）
      */
     public boolean isLiked() {
