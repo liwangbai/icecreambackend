@@ -71,25 +71,35 @@ public class PostController {
     }
 
     @GetMapping
-    @Operation(summary = "查询帖子列表", description = "查询帖子列表，支持分页、排序和多种筛选条件")
+    @Operation(summary = "查询帖子列表", description = "查询帖子列表，支持分页、排序和筛选条件（门派、大区、服务器、体型、玩法、标签）")
     public ResponseEntity<ApiResponse<PagedResult<Post>>> queryPosts(
             @Parameter(description = "页码，从0开始") @RequestParam(required = false, defaultValue = "0") Integer page,
             @Parameter(description = "每页大小") @RequestParam(required = false, defaultValue = "10") Integer size,
             @Parameter(description = "用户ID筛选") @RequestParam(required = false) Long userId,
-            @Parameter(description = "标签ID筛选") @RequestParam(required = false) Long tagId,
-            @Parameter(description = "排序字段: publishedAt, viewCount, likeCount")
+            @Parameter(description = "门派筛选") @RequestParam(required = false) String faction,
+            @Parameter(description = "大区筛选") @RequestParam(required = false) String region,
+            @Parameter(description = "服务器筛选") @RequestParam(required = false) String server,
+            @Parameter(description = "体型筛选") @RequestParam(required = false) String bodyType,
+            @Parameter(description = "玩法筛选") @RequestParam(required = false) String gameplay,
+            @Parameter(description = "标签筛选（模糊匹配）") @RequestParam(required = false) String tag,
+            @Parameter(description = "排序字段: publishedAt, viewCount, likeCount, hot")
             @RequestParam(required = false, defaultValue = "publishedAt") String sortBy,
             @Parameter(description = "排序方向: asc, desc")
             @RequestParam(required = false, defaultValue = "desc") String sortDirection) {
 
-        Long currentUserId = SecurityUtil.getCurrentUserId();
+        Long currentUserId = SecurityUtil.getCurrentUserIdOrNull();
 
         // 构建查询条件
         PostQueryRequest query = new PostQueryRequest();
         query.setPage(page);
         query.setSize(size);
         query.setUserId(userId);
-        query.setTagId(tagId);
+        query.setFaction(faction);
+        query.setRegion(region);
+        query.setServer(server);
+        query.setBodyType(bodyType);
+        query.setGameplay(gameplay);
+        query.setTag(tag);
         query.setSortBy(sortBy);
         query.setSortDirection(sortDirection);
         query.setCurrentUserId(currentUserId);

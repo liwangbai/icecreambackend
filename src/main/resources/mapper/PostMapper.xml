@@ -29,6 +29,7 @@
         <result property="target" column="target"/>
         <result property="contactDetail" column="contact_detail"/>
         <result property="imageUrls" column="image_urls"/>
+        <result property="tags" column="tags"/>
     </resultMap>
 
     <!-- 帖子详情结果映射，包含作者信息 -->
@@ -48,10 +49,32 @@
     </resultMap>
 
     <!-- 帖子列表结果映射，包含作者基本信息和是否点赞 -->
-    <resultMap id="postListResultMap" type="com.icecream.backend.model.Post" extends="postResultMap">
-        <!-- 是否点赞字段 -->
+    <resultMap id="postListResultMap" type="com.icecream.backend.model.Post">
+        <id property="id" column="id"/>
+        <result property="userId" column="user_id"/>
+        <result property="title" column="title"/>
+        <result property="content" column="content"/>
+        <result property="summary" column="summary"/>
+        <result property="coverImageUrl" column="cover_image_url"/>
+        <result property="viewCount" column="view_count"/>
+        <result property="likeCount" column="like_count"/>
+        <result property="commentCount" column="comment_count"/>
+        <result property="status" column="status"/>
+        <result property="visibility" column="visibility"/>
+        <result property="isTop" column="is_top"/>
+        <result property="publishedAt" column="published_at"/>
+        <result property="createdAt" column="created_at"/>
+        <result property="updatedAt" column="updated_at"/>
+        <result property="faction" column="faction"/>
+        <result property="region" column="region"/>
+        <result property="server" column="server"/>
+        <result property="bodyType" column="body_type"/>
+        <result property="gameplay" column="gameplay"/>
+        <result property="target" column="target"/>
+        <result property="contactDetail" column="contact_detail"/>
+        <result property="imageUrls" column="image_urls"/>
+        <result property="tags" column="tags"/>
         <result property="liked" column="liked"/>
-        <!-- 关联作者基本信息 -->
         <association property="author" javaType="com.icecream.backend.model.User">
             <id property="id" column="author_id"/>
             <result property="username" column="author_username"/>
@@ -79,11 +102,11 @@
         INSERT INTO posts (
             user_id, title, content, summary, cover_image_url,
             view_count, like_count, comment_count, status, visibility, is_top, published_at,
-            faction, region, server, body_type, gameplay, target, contact_detail, image_urls
+            faction, region, server, body_type, gameplay, target, contact_detail, image_urls, tags
         ) VALUES (
             #{userId}, #{title}, #{content}, #{summary}, #{coverImageUrl},
             #{viewCount}, #{likeCount}, #{commentCount}, #{status}, #{visibility}, #{isTop}, #{publishedAt},
-            #{faction}, #{region}, #{server}, #{bodyType}, #{gameplay}, #{target}, #{contactDetail}, #{imageUrls}
+            #{faction}, #{region}, #{server}, #{bodyType}, #{gameplay}, #{target}, #{contactDetail}, #{imageUrls}, #{tags}
         )
     </insert>
 
@@ -110,6 +133,7 @@
             <if test="target != null">target = #{target},</if>
             <if test="contactDetail != null">contact_detail = #{contactDetail},</if>
             <if test="imageUrls != null">image_urls = #{imageUrls},</if>
+            <if test="tags != null">tags = #{tags},</if>
             updated_at = NOW()
         </set>
         WHERE id = #{id}
@@ -123,61 +147,70 @@
 
     <!-- ========== 条件查询（基础查询） ========== -->
 
-    <!-- 根据条件查询帖子列表（支持分页） -->
     <select id="findByCondition" parameterType="com.icecream.backend.dto.request.PostQueryRequest" resultMap="postListResultMap">
         SELECT
-            p.*,
+            p.id, p.user_id, p.title, p.content, p.summary, p.cover_image_url,
+            p.view_count, p.like_count, p.comment_count, p.status, p.visibility,
+            p.is_top, p.published_at, p.created_at, p.updated_at,
+            p.faction, p.region, p.server, p.body_type, p.gameplay,
+            p.target, p.contact_detail, p.image_urls, p.tags,
             u.id as author_id,
             u.username as author_username,
             u.nickname as author_nickname,
             u.avatar_url as author_avatar_url,
-            <!-- 判断当前用户是否点赞 -->
-            <if test="currentUserId != null">
-                CASE WHEN EXISTS (
-                    SELECT 1 FROM post_likes pl
-                    WHERE pl.post_id = p.id AND pl.user_id = #{currentUserId}
-                ) THEN TRUE ELSE FALSE END as liked
-            </if>
-            <if test="currentUserId == null">
-                FALSE as liked
-            </if>
+            CASE WHEN EXISTS (
+                SELECT 1 FROM post_likes pl
+                WHERE pl.post_id = p.id AND pl.user_id = #{query.currentUserId}
+            ) THEN TRUE ELSE FALSE END as liked
         FROM posts p
         INNER JOIN users u ON p.user_id = u.id
         <where>
-            <!-- 基本筛选条件 -->
-            <if test="status != null">
-                AND p.status = #{status}
+            <if test="query.status != null">
+                AND p.status = #{query.status}
             </if>
-            <if test="visibility != null">
-                AND p.visibility = #{visibility}
+            <if test="query.visibility != null">
+                AND p.visibility = #{query.visibility}
             </if>
-            <if test="userId != null">
-                AND p.user_id = #{userId}
+            <if test="query.userId != null">
+                AND p.user_id = #{query.userId}
             </if>
-            <!-- 标签筛选：如果指定了tagId，则只查询包含该标签的帖子 -->
-            <if test="tagId != null">
-                AND EXISTS (
-                    SELECT 1 FROM post_tags pt
-                    WHERE pt.post_id = p.id AND pt.tag_id = #{tagId}
-                )
+            <if test="query.faction != null and query.faction != ''">
+                AND p.faction = #{query.faction}
+            </if>
+            <if test="query.region != null and query.region != ''">
+                AND p.region = #{query.region}
+            </if>
+            <if test="query.server != null and query.server != ''">
+                AND p.server = #{query.server}
+            </if>
+            <if test="query.bodyType != null and query.bodyType != ''">
+                AND p.body_type = #{query.bodyType}
+            </if>
+            <if test="query.gameplay != null and query.gameplay != ''">
+                AND p.gameplay = #{query.gameplay}
+            </if>
+            <if test="query.tag != null and query.tag != ''">
+                AND p.tags LIKE CONCAT('%', #{query.tag}, '%')
             </if>
         </where>
-        <!-- 排序 -->
         <choose>
-            <when test="sortBy == 'viewCount'">
-                ORDER BY p.view_count ${sortDirection}
+            <when test="query.sortBy == 'hot'">
+                ORDER BY (p.like_count * 3 + p.comment_count * 2 + p.view_count * 0.1 + 1)
+                    * EXP(-TIMESTAMPDIFF(HOUR, p.published_at, NOW()) / 72.0) DESC
             </when>
-            <when test="sortBy == 'likeCount'">
-                ORDER BY p.like_count ${sortDirection}
+            <when test="query.sortBy == 'viewCount'">
+                ORDER BY p.view_count ${query.sortDirection}
             </when>
-            <when test="sortBy == 'publishedAt' or sortBy == null">
-                ORDER BY p.published_at ${sortDirection}
+            <when test="query.sortBy == 'likeCount'">
+                ORDER BY p.like_count ${query.sortDirection}
+            </when>
+            <when test="query.sortBy == 'publishedAt' or query.sortBy == null">
+                ORDER BY p.published_at ${query.sortDirection}
             </when>
             <otherwise>
                 ORDER BY p.published_at DESC
             </otherwise>
         </choose>
-        <!-- 分页：通过PageHelper插件实现，这里不需要LIMIT -->
     </select>
 
     <!-- 根据条件统计帖子数量 -->
@@ -185,22 +218,32 @@
         SELECT COUNT(*)
         FROM posts p
         <where>
-            <!-- 基本筛选条件 -->
-            <if test="status != null">
-                AND p.status = #{status}
+            <if test="query.status != null">
+                AND p.status = #{query.status}
             </if>
-            <if test="visibility != null">
-                AND p.visibility = #{visibility}
+            <if test="query.visibility != null">
+                AND p.visibility = #{query.visibility}
             </if>
-            <if test="userId != null">
-                AND p.user_id = #{userId}
+            <if test="query.userId != null">
+                AND p.user_id = #{query.userId}
             </if>
-            <!-- 标签筛选 -->
-            <if test="tagId != null">
-                AND EXISTS (
-                    SELECT 1 FROM post_tags pt
-                    WHERE pt.post_id = p.id AND pt.tag_id = #{tagId}
-                )
+            <if test="query.faction != null and query.faction != ''">
+                AND p.faction = #{query.faction}
+            </if>
+            <if test="query.region != null and query.region != ''">
+                AND p.region = #{query.region}
+            </if>
+            <if test="query.server != null and query.server != ''">
+                AND p.server = #{query.server}
+            </if>
+            <if test="query.bodyType != null and query.bodyType != ''">
+                AND p.body_type = #{query.bodyType}
+            </if>
+            <if test="query.gameplay != null and query.gameplay != ''">
+                AND p.gameplay = #{query.gameplay}
+            </if>
+            <if test="query.tag != null and query.tag != ''">
+                AND p.tags LIKE CONCAT('%', #{query.tag}, '%')
             </if>
         </where>
     </select>

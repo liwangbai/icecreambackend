@@ -121,15 +121,21 @@ public class Post extends BaseEntity {
     private String imageUrls;
 
     /**
+     * 自定义标签列表（JSON格式存储）
+     */
+    private String tags;
+
+    /**
      * 图片链接列表（查询时从imageUrls JSON解析填充）
      */
     @EqualsAndHashCode.Exclude
     private List<String> imageUrlList;
 
     /**
-     * 帖子标签列表
+     * 标签列表（查询时从tags JSON解析填充）
      */
-    private List<Tag> tags;
+    @EqualsAndHashCode.Exclude
+    private List<String> tagList;
 
     /**
      * 当前用户是否点赞（需要当前用户ID上下文）

@@ -68,4 +68,10 @@ public class PostUpdateRequest {
      * 图片链接列表
      */
     private List<String> imageUrls;
+
+    /**
+     * 自定义标签列表，最多5个
+     */
+    @Size(max = 5, message = "标签最多5个")
+    private List<@Size(max = 20, message = "单个标签长度不能超过20个字符") String> tags;
 }

@@ -4,6 +4,7 @@ import lombok.Data;
 
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.Size;
+import jakarta.validation.constraints.Max;
 import java.util.List;
 
 /**
@@ -70,6 +71,12 @@ public class PostCreateRequest {
      */
     @Size(max = 200, message = "联系方式长度不能超过200个字符")
     private String contactDetail;
+
+    /**
+     * 自定义标签列表（选填），最多5个，如 ["深圳", "招募"]
+     */
+    @Size(max = 5, message = "标签最多5个")
+    private List<@Size(max = 20, message = "单个标签长度不能超过20个字符") String> tags;
 
     /**
      * 图片链接列表（选填），若没有图片，传空列表[]或不传

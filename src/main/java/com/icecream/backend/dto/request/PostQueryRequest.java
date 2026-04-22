@@ -24,9 +24,34 @@ public class PostQueryRequest {
     private Long userId;
 
     /**
-     * 标签ID筛选条件，查询包含指定标签的帖子
+     * 门派筛选
      */
-    private Long tagId;
+    private String faction;
+
+    /**
+     * 大区筛选
+     */
+    private String region;
+
+    /**
+     * 服务器筛选
+     */
+    private String server;
+
+    /**
+     * 体型筛选
+     */
+    private String bodyType;
+
+    /**
+     * 玩法筛选
+     */
+    private String gameplay;
+
+    /**
+     * 标签筛选（模糊匹配）
+     */
+    private String tag;
 
     /**
      * 排序字段，可选值：publishedAt, viewCount, likeCount

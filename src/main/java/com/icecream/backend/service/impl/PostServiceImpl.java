@@ -59,6 +59,14 @@ public class PostServiceImpl implements PostService {
                 throw new RuntimeException("图片链接序列化失败");
             }
         }
+        // 将标签列表转为JSON字符串存储
+        if (request.getTags() != null && !request.getTags().isEmpty()) {
+            try {
+                post.setTags(objectMapper.writeValueAsString(request.getTags()));
+            } catch (JsonProcessingException e) {
+                throw new RuntimeException("标签序列化失败");
+            }
+        }
         // 设置默认值
         post.setStatus(1);
         post.setVisibility(1);
@@ -150,6 +158,13 @@ public class PostServiceImpl implements PostService {
                 post.setImageUrls(objectMapper.writeValueAsString(request.getImageUrls()));
             } catch (JsonProcessingException e) {
                 throw new RuntimeException("图片链接序列化失败");
+            }
+        }
+        if (request.getTags() != null) {
+            try {
+                post.setTags(objectMapper.writeValueAsString(request.getTags()));
+            } catch (JsonProcessingException e) {
+                throw new RuntimeException("标签序列化失败");
             }
         }
 
@@ -304,6 +319,16 @@ public class PostServiceImpl implements PostService {
             }
         }
 
+        // 将tags从JSON字符串转为List
+        if (post.getTags() != null && !post.getTags().isEmpty()) {
+            try {
+                post.setTagList(objectMapper.readValue(post.getTags(),
+                    objectMapper.getTypeFactory().constructCollectionType(List.class, String.class)));
+            } catch (JsonProcessingException e) {
+                log.warn("解析标签失败: {}", post.getTags());
+            }
+        }
+
         // 设置是否点赞
         if (currentUserId != null) {
             post.setLiked(postMapper.existsLike(currentUserId, post.getId()));
@@ -325,6 +350,16 @@ public class PostServiceImpl implements PostService {
             author.setNickname(userOpt.get().getNickname());
             author.setAvatarUrl(userOpt.get().getAvatarUrl());
             post.setAuthor(author);
+        }
+
+        // 将tags从JSON字符串转为List
+        if (post.getTags() != null && !post.getTags().isEmpty()) {
+            try {
+                post.setTagList(objectMapper.readValue(post.getTags(),
+                    objectMapper.getTypeFactory().constructCollectionType(List.class, String.class)));
+            } catch (JsonProcessingException e) {
+                log.warn("解析标签失败: {}", post.getTags());
+            }
         }
 
         // 设置是否点赞
