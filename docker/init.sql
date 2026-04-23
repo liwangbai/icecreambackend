@@ -113,6 +113,40 @@ CREATE TABLE IF NOT EXISTS post_likes (
     INDEX idx_post_id (post_id)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='帖子点赞表';
 
+-- ========== 评论表 ==========
+CREATE TABLE IF NOT EXISTS comments (
+    id BIGINT PRIMARY KEY AUTO_INCREMENT,
+    post_id BIGINT NOT NULL COMMENT '所属帖子ID',
+    user_id BIGINT NOT NULL COMMENT '评论者用户ID',
+    content TEXT NOT NULL COMMENT '评论内容',
+    parent_id BIGINT COMMENT '父评论ID（顶级为null，支持楼中楼）',
+    like_count INT DEFAULT 0 COMMENT '点赞数',
+    reply_count INT DEFAULT 0 COMMENT '回复数（仅一级评论显示）',
+    status TINYINT DEFAULT 1 COMMENT '状态：0-已删除，1-正常',
+    created_at DATETIME DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
+    updated_at DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT '更新时间',
+    FOREIGN KEY (post_id) REFERENCES posts(id) ON DELETE CASCADE,
+    FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
+    FOREIGN KEY (parent_id) REFERENCES comments(id) ON DELETE CASCADE,
+    INDEX idx_post_id (post_id),
+    INDEX idx_user_id (user_id),
+    INDEX idx_parent_id (parent_id),
+    INDEX idx_status (status),
+    INDEX idx_created_at (created_at DESC)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='评论表';
+
+-- ========== 评论点赞表 ==========
+CREATE TABLE IF NOT EXISTS comment_likes (
+    id BIGINT PRIMARY KEY AUTO_INCREMENT,
+    comment_id BIGINT NOT NULL COMMENT '评论ID',
+    user_id BIGINT NOT NULL COMMENT '点赞用户ID',
+    created_at DATETIME DEFAULT CURRENT_TIMESTAMP COMMENT '点赞时间',
+    UNIQUE KEY uk_comment_user (comment_id, user_id),
+    FOREIGN KEY (comment_id) REFERENCES comments(id) ON DELETE CASCADE,
+    FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
+    INDEX idx_user_id (user_id)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='评论点赞表';
+
 -- ========== 示例数据 ==========
 
 -- 插入示例用户（密码均为：password123，BCrypt加密后）
