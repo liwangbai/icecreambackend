@@ -2,7 +2,7 @@ package com.icecream.backend.config;
 
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Configuration;
-import org.springframework.util.StringUtils;
+import org.springframework.web.servlet.config.annotation.InterceptorRegistry;
 import org.springframework.web.servlet.config.annotation.ResourceHandlerRegistry;
 import org.springframework.web.servlet.config.annotation.WebMvcConfigurer;
 
@@ -11,13 +11,26 @@ import java.nio.file.Paths;
 
 /**
  * Web MVC配置
- * 配置静态资源映射，让上传的文件可以通过HTTP访问
+ * 配置静态资源映射和拦截器
  */
 @Configuration
 public class WebMvcConfig implements WebMvcConfigurer {
 
+    private final RequestLoggingInterceptor requestLoggingInterceptor;
+
     @Value("${file.upload.base-dir:./uploads}")
     private String uploadBaseDir;
+
+    public WebMvcConfig(RequestLoggingInterceptor requestLoggingInterceptor) {
+        this.requestLoggingInterceptor = requestLoggingInterceptor;
+    }
+
+    @Override
+    public void addInterceptors(InterceptorRegistry registry) {
+        registry.addInterceptor(requestLoggingInterceptor)
+                .addPathPatterns("/api/**")
+                .excludePathPatterns("/api-docs/**", "/swagger-ui/**", "/swagger-ui.html");
+    }
 
     @Override
     public void addResourceHandlers(ResourceHandlerRegistry registry) {

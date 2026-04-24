@@ -5,6 +5,7 @@ import jakarta.servlet.http.HttpServletResponse;
 import lombok.RequiredArgsConstructor;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.http.HttpMethod;
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.config.annotation.authentication.configuration.AuthenticationConfiguration;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
@@ -50,6 +51,19 @@ public class SecurityConfig {
             )
             .authorizeHttpRequests(auth -> auth
                 .requestMatchers("/api/v1/auth/**").permitAll()
+                // 公开读接口（游客可访问）
+                .requestMatchers(HttpMethod.GET, "/api/v1/posts").permitAll()
+                .requestMatchers(HttpMethod.GET, "/api/v1/posts/{postId}").permitAll()
+                .requestMatchers(HttpMethod.GET, "/api/v1/posts/user/{userId}").permitAll()
+                .requestMatchers(HttpMethod.GET, "/api/v1/posts/following").permitAll()
+                .requestMatchers(HttpMethod.GET, "/api/v1/posts/{postId}/comments").permitAll()
+                .requestMatchers(HttpMethod.GET, "/api/v1/comments/{commentId}").permitAll()
+                .requestMatchers(HttpMethod.GET, "/api/v1/comments/{commentId}/replies").permitAll()
+                .requestMatchers(HttpMethod.GET, "/api/v1/comments/{commentId}/is-liked").permitAll()
+                .requestMatchers(HttpMethod.GET, "/api/v1/tags/**").permitAll()
+                .requestMatchers(HttpMethod.GET, "/api/v1/users/{userId}").permitAll()
+                .requestMatchers(HttpMethod.GET, "/api/v1/users/{userId}/followers").permitAll()
+                .requestMatchers(HttpMethod.GET, "/api/v1/users/{userId}/following").permitAll()
                 .requestMatchers("/actuator/health").permitAll()
                 .requestMatchers(
                         "/swagger-ui/**",
