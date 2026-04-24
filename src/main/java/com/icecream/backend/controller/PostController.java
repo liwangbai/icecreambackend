@@ -1,6 +1,7 @@
 package com.icecream.backend.controller;
 
 import com.icecream.backend.dto.ApiResponse;
+import com.icecream.backend.dto.HotTagDTO;
 import com.icecream.backend.dto.PagedResult;
 import com.icecream.backend.dto.request.PostCreateRequest;
 import com.icecream.backend.dto.request.PostQueryRequest;
@@ -158,6 +159,14 @@ public class PostController {
         log.debug("获取关注用户帖子: userId={}", currentUserId);
         List<Post> posts = postService.getFollowingPosts(currentUserId);
         return ResponseEntity.ok(ApiResponse.success("获取成功", posts));
+    }
+
+    @GetMapping("/hot-tags")
+    @Operation(summary = "获取热门标签", description = "获取最近30天内最热门的9个自定义标签")
+    public ResponseEntity<ApiResponse<List<HotTagDTO>>> getHotTags() {
+        log.debug("获取热门标签");
+        List<HotTagDTO> hotTags = postService.getHotTags(30, 9);
+        return ResponseEntity.ok(ApiResponse.success("获取成功", hotTags));
     }
 
 }

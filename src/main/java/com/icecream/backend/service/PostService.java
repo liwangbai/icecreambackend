@@ -1,5 +1,6 @@
 package com.icecream.backend.service;
 
+import com.icecream.backend.dto.HotTagDTO;
 import com.icecream.backend.dto.request.PostCreateRequest;
 import com.icecream.backend.dto.request.PostQueryRequest;
 import com.icecream.backend.dto.request.PostUpdateRequest;
@@ -106,4 +107,12 @@ public interface PostService {
      * @return 帖子列表
      */
     List<Post> getPostsByTagId(Long tagId);
+
+    /**
+     * 获取热门自定义标签
+     * @param days 统计天数
+     * @param limit 返回数量限制
+     * @return 热门标签列表
+     */
+    List<HotTagDTO> getHotTags(int days, int limit);
 }

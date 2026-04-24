@@ -56,6 +56,7 @@ public class SecurityConfig {
                 .requestMatchers(HttpMethod.GET, "/api/v1/posts/{postId}").permitAll()
                 .requestMatchers(HttpMethod.GET, "/api/v1/posts/user/{userId}").permitAll()
                 .requestMatchers(HttpMethod.GET, "/api/v1/posts/following").permitAll()
+                .requestMatchers(HttpMethod.GET, "/api/v1/posts/hot-tags").permitAll()
                 .requestMatchers(HttpMethod.GET, "/api/v1/posts/{postId}/comments").permitAll()
                 .requestMatchers(HttpMethod.GET, "/api/v1/comments/{commentId}").permitAll()
                 .requestMatchers(HttpMethod.GET, "/api/v1/comments/{commentId}/replies").permitAll()

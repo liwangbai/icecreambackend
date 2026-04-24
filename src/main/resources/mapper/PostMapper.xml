@@ -359,6 +359,15 @@
         ORDER BY p.published_at DESC
     </select>
 
+    <!-- 查询最近有标签的帖子（用于统计热门标签） -->
+    <select id="findRecentPostsWithTags" resultMap="postResultMap">
+        SELECT id, tags FROM posts
+        WHERE status = 1
+          AND published_at >= DATE_SUB(NOW(), INTERVAL #{days} DAY)
+          AND tags IS NOT NULL
+          AND tags != '[]'
+    </select>
+
     <!-- ========== 点赞相关查询 ========== -->
 
     <!-- 检查用户是否点赞了帖子 -->

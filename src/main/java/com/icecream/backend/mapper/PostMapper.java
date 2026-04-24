@@ -131,6 +131,13 @@ public interface PostMapper {
     List<Post> findByTagId(@Param("tagId") Long tagId);
 
     /**
+     * 查询最近有标签的帖子（用于统计热门标签）
+     * @param days 天数
+     * @return 帖子列表（只包含id和tags字段）
+     */
+    List<Post> findRecentPostsWithTags(@Param("days") int days);
+
+    /**
      * 检查用户是否点赞了帖子
      * @param userId 用户ID
      * @param postId 帖子ID

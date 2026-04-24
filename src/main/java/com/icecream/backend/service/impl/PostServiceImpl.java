@@ -1,5 +1,6 @@
 package com.icecream.backend.service.impl;
 
+import com.icecream.backend.dto.HotTagDTO;
 import com.icecream.backend.dto.request.PostCreateRequest;
 import com.icecream.backend.dto.request.PostQueryRequest;
 import com.icecream.backend.dto.request.PostUpdateRequest;
@@ -19,8 +20,8 @@ import com.icecream.backend.exception.ResourceNotFoundException;
 import com.icecream.backend.exception.ForbiddenException;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import java.util.List;
-import java.util.Optional;
+import java.util.*;
+import java.util.stream.Collectors;
 
 /**
  * 帖子服务实现类
@@ -297,6 +298,41 @@ public class PostServiceImpl implements PostService {
         }
 
         return posts;
+    }
+
+    @Override
+    public List<HotTagDTO> getHotTags(int days, int limit) {
+        log.debug("获取热门标签: days={}, limit={}", days, limit);
+
+        List<Post> posts = postMapper.findRecentPostsWithTags(days);
+
+        // 统计每个标签的出现次数
+        Map<String, Integer> tagCountMap = new HashMap<>();
+        for (Post post : posts) {
+            if (post.getTags() != null && !post.getTags().isEmpty()) {
+                try {
+                    List<String> tagList = objectMapper.readValue(post.getTags(),
+                        objectMapper.getTypeFactory().constructCollectionType(List.class, String.class));
+                    for (String tag : tagList) {
+                        if (tag != null && !tag.isBlank()) {
+                            tagCountMap.merge(tag, 1, Integer::sum);
+                        }
+                    }
+                } catch (JsonProcessingException e) {
+                    log.warn("解析标签失败: {}", post.getTags());
+                }
+            }
+        }
+
+        // 按出现次数降序排序，取前limit个
+        return tagCountMap.entrySet().stream()
+                .sorted(Map.Entry.<String, Integer>comparingByValue().reversed())
+                .limit(limit)
+                .map(entry -> HotTagDTO.builder()
+                        .tagName(entry.getKey())
+                        .count(entry.getValue())
+                        .build())
+                .collect(Collectors.toList());
     }
 
     // ========== 私有方法 ==========
