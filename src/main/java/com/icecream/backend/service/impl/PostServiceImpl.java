@@ -332,8 +332,12 @@ public class PostServiceImpl implements PostService {
         // 设置是否点赞
         if (currentUserId != null) {
             post.setLiked(postMapper.existsLike(currentUserId, post.getId()));
+            post.setFollowed(userMapper.existsFollow(currentUserId, post.getUserId()));
+            post.setFollowMe(userMapper.existsFollow(post.getUserId(), currentUserId));
         } else {
             post.setLiked(false);
+            post.setFollowed(false);
+            post.setFollowMe(false);
         }
     }
 
