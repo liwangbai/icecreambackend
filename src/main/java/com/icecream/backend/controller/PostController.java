@@ -45,7 +45,7 @@ public class PostController {
     @GetMapping("/{postId}")
     @Operation(summary = "获取帖子详情", description = "根据ID获取帖子详情，同时增加帖子浏览数")
     public ResponseEntity<ApiResponse<Post>> getPostById(@PathVariable Long postId) {
-        Long currentUserId = SecurityUtil.getCurrentUserId();
+        Long currentUserId = SecurityUtil.getCurrentUserIdOrNull();
         log.debug("获取帖子详情: postId={}, userId={}", postId, currentUserId);
         Post post = postService.getPostById(postId, currentUserId);
         return ResponseEntity.ok(ApiResponse.success("获取成功", post));
