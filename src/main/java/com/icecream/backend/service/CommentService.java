@@ -59,12 +59,12 @@ public interface CommentService {
     boolean isLiked(Long commentId, Long userId);
 
     /**
-     * 获取一级评论的所有回复（分页）
+     * 获取一级评论下的所有二级回复（分页，通过rootId查询）
      */
-    List<Comment> getRepliesByParentId(Long parentId, Long currentUserId, int page, int size);
+    List<Comment> getRepliesByRootId(Long rootId, Long currentUserId, int page, int size);
 
     /**
-     * 统计一级评论的回复数量
+     * 统计一级评论的二级回复数量
      */
-    long countRepliesByParentId(Long parentId);
+    long countRepliesByRootId(Long rootId);
 }

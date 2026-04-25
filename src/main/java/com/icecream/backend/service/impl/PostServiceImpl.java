@@ -335,6 +335,24 @@ public class PostServiceImpl implements PostService {
                 .collect(Collectors.toList());
     }
 
+    @Override
+    public List<Post> getPostsByTagName(String tagName, Long currentUserId) {
+        log.debug("根据标签名查询帖子: tagName={}", tagName);
+
+        List<Post> posts = postMapper.findByTagName(tagName, currentUserId);
+
+        for (Post post : posts) {
+            enrichPostWithBasicAssociations(post, currentUserId);
+        }
+
+        return posts;
+    }
+
+    @Override
+    public long countPostsByTagName(String tagName) {
+        return postMapper.countByTagName(tagName);
+    }
+
     // ========== 私有方法 ==========
 
     /**

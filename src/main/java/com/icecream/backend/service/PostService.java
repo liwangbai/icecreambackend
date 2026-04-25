@@ -115,4 +115,19 @@ public interface PostService {
      * @return 热门标签列表
      */
     List<HotTagDTO> getHotTags(int days, int limit);
+
+    /**
+     * 根据标签名查询帖子（精确匹配JSON数组中的标签）
+     * @param tagName 标签名称
+     * @param currentUserId 当前用户ID（可为null）
+     * @return 帖子列表
+     */
+    List<Post> getPostsByTagName(String tagName, Long currentUserId);
+
+    /**
+     * 根据标签名统计帖子数量
+     * @param tagName 标签名称
+     * @return 帖子数量
+     */
+    long countPostsByTagName(String tagName);
 }

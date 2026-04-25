@@ -31,6 +31,21 @@ public class Comment extends BaseEntity {
     private Long parentId;
 
     /**
+     * 根评论ID（一级评论为null，二级评论指向其所属的一级评论）
+     */
+    private Long rootId;
+
+    /**
+     * 回复目标用户ID（用于@功能，可为null）
+     */
+    private Long replyToUserId;
+
+    /**
+     * 回复目标用户信息（查询时填充）
+     */
+    private User replyToUser;
+
+    /**
      * 点赞数
      */
     private Integer likeCount;

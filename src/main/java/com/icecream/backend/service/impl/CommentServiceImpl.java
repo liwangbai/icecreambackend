@@ -9,14 +9,12 @@ import com.icecream.backend.mapper.CommentMapper;
 import com.icecream.backend.mapper.PostMapper;
 import com.icecream.backend.model.Comment;
 import com.icecream.backend.model.Post;
-import com.icecream.backend.model.User;
 import com.icecream.backend.service.CommentService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
 
@@ -42,7 +40,15 @@ public class CommentServiceImpl implements CommentService {
             throw new ResourceNotFoundException("帖子不存在");
         }
 
-        // 如果是回复，检查父评论是否存在
+        Comment comment = new Comment();
+        comment.setPostId(postId);
+        comment.setUserId(userId);
+        comment.setContent(request.getContent());
+        comment.setLikeCount(0);
+        comment.setReplyCount(0);
+        comment.setStatus(1);
+
+        // 如果是回复，设置rootId和replyToUserId
         if (request.getParentId() != null) {
             Optional<Comment> parentOpt = commentMapper.findById(request.getParentId());
             if (!parentOpt.isPresent()) {
@@ -53,19 +59,19 @@ public class CommentServiceImpl implements CommentService {
             if (!parent.getPostId().equals(postId)) {
                 throw new ForbiddenException("不能在不同的帖子下回复");
             }
-            // 增加父评论的回复数
-            commentMapper.incrementReplyCount(request.getParentId());
+            // 设置parentId
+            comment.setParentId(request.getParentId());
+            // 设置replyToUserId（回复目标是被回复评论的作者）
+            comment.setReplyToUserId(parent.getUserId());
+            // 设置rootId：如果父评论是1级评论，rootId就是父评论id；如果是2级评论，rootId继承父评论的rootId
+            if (parent.getRootId() == null) {
+                comment.setRootId(parent.getId());
+            } else {
+                comment.setRootId(parent.getRootId());
+            }
+            // 增加一级评论的replyCount（通过rootId）
+            commentMapper.incrementReplyCount(comment.getRootId());
         }
-
-        // 创建评论对象
-        Comment comment = new Comment();
-        comment.setPostId(postId);
-        comment.setUserId(userId);
-        comment.setContent(request.getContent());
-        comment.setParentId(request.getParentId());
-        comment.setLikeCount(0);
-        comment.setReplyCount(0);
-        comment.setStatus(1);
 
         // 插入评论
         commentMapper.insert(comment);
@@ -87,9 +93,9 @@ public class CommentServiceImpl implements CommentService {
         // 查询顶级评论
         List<Comment> comments = commentMapper.findTopLevelByPostId(postId, currentUserId);
 
-        // 为每个顶级评论加载前3条回复
+        // 为每个顶级评论加载前3条二级回复
         for (Comment comment : comments) {
-            List<Comment> replies = commentMapper.findRepliesByParentId(comment.getId(), currentUserId);
+            List<Comment> replies = commentMapper.findTop3RepliesByRootId(comment.getId(), currentUserId);
             comment.setReplies(replies);
         }
 
@@ -117,7 +123,7 @@ public class CommentServiceImpl implements CommentService {
     @Override
     @Transactional
     public Comment updateComment(Long commentId, Long userId, CommentUpdateRequest request) {
-        log.info("更新评论: commentId={}, userId={}", commentId, userId);
+        log.info("更新评论: commentId={}, userId={}", commentId, commentId);
 
         Optional<Comment> commentOpt = commentMapper.findById(commentId);
         if (!commentOpt.isPresent()) {
@@ -158,15 +164,15 @@ public class CommentServiceImpl implements CommentService {
             throw new ForbiddenException("没有权限删除此评论");
         }
 
-        // 如果是一级评论，减少父评论的回复数
-        if (comment.getParentId() != null) {
-            commentMapper.decrementReplyCount(comment.getParentId());
+        // 如果是二级评论，减少对应一级评论的replyCount
+        if (comment.getRootId() != null) {
+            commentMapper.decrementReplyCount(comment.getRootId());
         }
 
         // 减少帖子的评论数
         postMapper.decrementCommentCount(comment.getPostId());
 
-        // 软删除评论
+        // 软删除评论（status=0），由于查询时过滤status=1，被软删除的评论不会展示
         commentMapper.softDelete(commentId);
 
         log.info("评论删除成功: commentId={}", commentId);
@@ -224,18 +230,18 @@ public class CommentServiceImpl implements CommentService {
     }
 
     @Override
-    public List<Comment> getRepliesByParentId(Long parentId, Long currentUserId, int page, int size) {
-        log.debug("获取子回复列表: parentId={}, page={}, size={}", parentId, page, size);
+    public List<Comment> getRepliesByRootId(Long rootId, Long currentUserId, int page, int size) {
+        log.debug("获取一级评论下的二级回复列表: rootId={}, page={}, size={}", rootId, page, size);
 
         // 设置分页
         PageHelper.startPage(page, size);
 
-        return commentMapper.findRepliesByParentId(parentId, currentUserId);
+        return commentMapper.findRepliesByRootId(rootId, currentUserId);
     }
 
     @Override
-    public long countRepliesByParentId(Long parentId) {
-        return commentMapper.countByParentId(parentId);
+    public long countRepliesByRootId(Long rootId) {
+        return commentMapper.countByRootId(rootId);
     }
 
     // ========== 私有方法 ==========

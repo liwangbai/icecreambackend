@@ -169,4 +169,26 @@ public class PostController {
         return ResponseEntity.ok(ApiResponse.success("获取成功", hotTags));
     }
 
+    @GetMapping("/by-tag/{tagName}")
+    @Operation(summary = "获取标签下的帖子", description = "根据标签名精确查询所有包含该标签的帖子，支持分页")
+    public ResponseEntity<ApiResponse<PagedResult<Post>>> getPostsByTagName(
+            @Parameter(description = "标签名称") @PathVariable String tagName,
+            @Parameter(description = "页码，从0开始") @RequestParam(required = false, defaultValue = "0") Integer page,
+            @Parameter(description = "每页大小") @RequestParam(required = false, defaultValue = "20") Integer size,
+            @Parameter(description = "排序字段: publishedAt, viewCount, likeCount, hot")
+            @RequestParam(required = false, defaultValue = "publishedAt") String sortBy,
+            @Parameter(description = "排序方向: asc, desc")
+            @RequestParam(required = false, defaultValue = "desc") String sortDirection) {
+        Long currentUserId = SecurityUtil.getCurrentUserIdOrNull();
+        log.debug("获取标签下的帖子: tagName={}, page={}, size={}", tagName, page, size);
+
+        // 使用PageHelper分页
+        com.github.pagehelper.PageHelper.startPage(page + 1, size);
+        List<Post> posts = postService.getPostsByTagName(tagName, currentUserId);
+        long total = postService.countPostsByTagName(tagName);
+
+        PagedResult<Post> pagedResult = PagedResult.of(posts, total, page, size);
+        return ResponseEntity.ok(ApiResponse.success("获取成功", pagedResult));
+    }
+
 }

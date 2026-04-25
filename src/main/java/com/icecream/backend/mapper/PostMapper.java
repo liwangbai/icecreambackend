@@ -138,6 +138,21 @@ public interface PostMapper {
     List<Post> findRecentPostsWithTags(@Param("days") int days);
 
     /**
+     * 根据标签名精确查询帖子（JSON_CONTAINS匹配）
+     * @param tagName 标签名称
+     * @param currentUserId 当前用户ID（可为null）
+     * @return 帖子列表
+     */
+    List<Post> findByTagName(@Param("tagName") String tagName, @Param("currentUserId") Long currentUserId);
+
+    /**
+     * 根据标签名统计帖子数量
+     * @param tagName 标签名称
+     * @return 帖子数量
+     */
+    long countByTagName(@Param("tagName") String tagName);
+
+    /**
      * 检查用户是否点赞了帖子
      * @param userId 用户ID
      * @param postId 帖子ID

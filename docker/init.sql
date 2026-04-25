@@ -120,6 +120,8 @@ CREATE TABLE IF NOT EXISTS comments (
     user_id BIGINT NOT NULL COMMENT '评论者用户ID',
     content TEXT NOT NULL COMMENT '评论内容',
     parent_id BIGINT COMMENT '父评论ID（顶级为null，支持楼中楼）',
+    root_id BIGINT COMMENT '根评论ID（一级评论为null，二级评论指向其所属的一级评论）',
+    reply_to_user_id BIGINT COMMENT '回复目标用户ID（用于@功能，可为null）',
     like_count INT DEFAULT 0 COMMENT '点赞数',
     reply_count INT DEFAULT 0 COMMENT '回复数（仅一级评论显示）',
     status TINYINT DEFAULT 1 COMMENT '状态：0-已删除，1-正常',
@@ -131,6 +133,7 @@ CREATE TABLE IF NOT EXISTS comments (
     INDEX idx_post_id (post_id),
     INDEX idx_user_id (user_id),
     INDEX idx_parent_id (parent_id),
+    INDEX idx_root_id (root_id),
     INDEX idx_status (status),
     INDEX idx_created_at (created_at DESC)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='评论表';

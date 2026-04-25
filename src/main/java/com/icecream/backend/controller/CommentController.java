@@ -112,15 +112,15 @@ public class CommentController {
     }
 
     @GetMapping("/comments/{commentId}/replies")
-    @Operation(summary = "获取评论的回复列表", description = "获取一级评论的所有回复（分页）")
-    public ResponseEntity<ApiResponse<PagedResult<Comment>>> getRepliesByParentId(
+    @Operation(summary = "获取一级评论的二级回复列表", description = "获取一级评论下的所有二级回复（分页，通过rootId查询）")
+    public ResponseEntity<ApiResponse<PagedResult<Comment>>> getRepliesByRootId(
             @PathVariable Long commentId,
             @Parameter(description = "页码，从0开始") @RequestParam(required = false, defaultValue = "0") Integer page,
             @Parameter(description = "每页大小") @RequestParam(required = false, defaultValue = "10") Integer size) {
         Long currentUserId = SecurityUtil.getCurrentUserIdOrNull();
-        log.debug("获取评论回复列表: parentId={}, page={}, size={}", commentId, page, size);
-        List<Comment> replies = commentService.getRepliesByParentId(commentId, currentUserId, page, size);
-        long total = commentService.countRepliesByParentId(commentId);
+        log.debug("获取二级回复列表: rootId={}, page={}, size={}", commentId, page, size);
+        List<Comment> replies = commentService.getRepliesByRootId(commentId, currentUserId, page, size);
+        long total = commentService.countRepliesByRootId(commentId);
         PagedResult<Comment> pagedResult = PagedResult.of(replies, total, page, size);
         return ResponseEntity.ok(ApiResponse.success("获取成功", pagedResult));
     }

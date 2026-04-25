@@ -29,12 +29,27 @@ public interface CommentMapper {
     long countByPostId(@Param("postId") Long postId);
 
     /**
-     * 查询某一级评论的子回复列表
+     * 查询某评论的直接子回复列表
      */
     List<Comment> findRepliesByParentId(@Param("parentId") Long parentId, @Param("currentUserId") Long currentUserId);
 
     /**
-     * 统计某一级评论的子回复数量
+     * 查询某一级评论下的所有二级评论（最多3条，用于评论列表初始加载）
+     */
+    List<Comment> findTop3RepliesByRootId(@Param("rootId") Long rootId, @Param("currentUserId") Long currentUserId);
+
+    /**
+     * 查询某一级评论下的所有二级评论（分页，用于查看更多回复）
+     */
+    List<Comment> findRepliesByRootId(@Param("rootId") Long rootId, @Param("currentUserId") Long currentUserId);
+
+    /**
+     * 统计某一级评论的二级回复数量
+     */
+    long countByRootId(@Param("rootId") Long rootId);
+
+    /**
+     * 统计某评论的直接子回复数量
      */
     long countByParentId(@Param("parentId") Long parentId);
 
@@ -64,14 +79,14 @@ public interface CommentMapper {
     int decrementLikeCount(@Param("commentId") Long commentId);
 
     /**
-     * 增加回复数
+     * 增加一级评论的回复数（通过rootId）
      */
-    int incrementReplyCount(@Param("commentId") Long commentId);
+    int incrementReplyCount(@Param("rootId") Long rootId);
 
     /**
-     * 减少回复数
+     * 减少一级评论的回复数（通过rootId）
      */
-    int decrementReplyCount(@Param("commentId") Long commentId);
+    int decrementReplyCount(@Param("rootId") Long rootId);
 
     /**
      * 检查用户是否点赞了评论

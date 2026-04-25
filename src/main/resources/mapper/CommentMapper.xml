@@ -4,13 +4,15 @@
 
     <!-- ========== 结果映射定义 ========== -->
 
-    <!-- 评论结果映射，包含作者信息和是否点赞 -->
+    <!-- 评论结果映射，包含作者信息、回复目标用户信息、是否点赞 -->
     <resultMap id="commentResultMap" type="com.icecream.backend.model.Comment">
         <id property="id" column="id"/>
         <result property="postId" column="post_id"/>
         <result property="userId" column="user_id"/>
         <result property="content" column="content"/>
         <result property="parentId" column="parent_id"/>
+        <result property="rootId" column="root_id"/>
+        <result property="replyToUserId" column="reply_to_user_id"/>
         <result property="likeCount" column="like_count"/>
         <result property="replyCount" column="reply_count"/>
         <result property="status" column="status"/>
@@ -23,6 +25,12 @@
             <result property="nickname" column="author_nickname"/>
             <result property="avatarUrl" column="author_avatar_url"/>
         </association>
+        <association property="replyToUser" javaType="com.icecream.backend.model.User">
+            <id property="id" column="reply_to_id"/>
+            <result property="username" column="reply_to_username"/>
+            <result property="nickname" column="reply_to_nickname"/>
+            <result property="avatarUrl" column="reply_to_avatar_url"/>
+        </association>
     </resultMap>
 
     <!-- ========== 基本CRUD操作 ========== -->
@@ -30,27 +38,36 @@
     <!-- 根据ID查询评论 -->
     <select id="findById" resultMap="commentResultMap">
         SELECT
-            c.id, c.post_id, c.user_id, c.content, c.parent_id,
+            c.id, c.post_id, c.user_id, c.content, c.parent_id, c.root_id, c.reply_to_user_id,
             c.like_count, c.reply_count, c.status, c.created_at, c.updated_at,
             u.id as author_id,
             u.username as author_username,
             u.nickname as author_nickname,
             u.avatar_url as author_avatar_url,
+            ru.id as reply_to_id,
+            ru.username as reply_to_username,
+            ru.nickname as reply_to_nickname,
+            ru.avatar_url as reply_to_avatar_url,
             FALSE as liked
         FROM comments c
         INNER JOIN users u ON c.user_id = u.id
+        LEFT JOIN users ru ON c.reply_to_user_id = ru.id
         WHERE c.id = #{id} AND c.status = 1
     </select>
 
     <!-- 查询帖子的顶级评论列表（分页由PageHelper在Service层处理） -->
     <select id="findTopLevelByPostId" resultMap="commentResultMap">
         SELECT
-            c.id, c.post_id, c.user_id, c.content, c.parent_id,
+            c.id, c.post_id, c.user_id, c.content, c.parent_id, c.root_id, c.reply_to_user_id,
             c.like_count, c.reply_count, c.status, c.created_at, c.updated_at,
             u.id as author_id,
             u.username as author_username,
             u.nickname as author_nickname,
             u.avatar_url as author_avatar_url,
+            ru.id as reply_to_id,
+            ru.username as reply_to_username,
+            ru.nickname as reply_to_nickname,
+            ru.avatar_url as reply_to_avatar_url,
             <if test="currentUserId != null">
                 CASE WHEN EXISTS (
                     SELECT 1 FROM comment_likes cl
@@ -62,6 +79,7 @@
             </if>
         FROM comments c
         INNER JOIN users u ON c.user_id = u.id
+        LEFT JOIN users ru ON c.reply_to_user_id = ru.id
         WHERE c.post_id = #{postId}
           AND c.parent_id IS NULL
           AND c.status = 1
@@ -77,15 +95,19 @@
           AND status = 1
     </select>
 
-    <!-- 查询某一级评论的子回复列表（前3条） -->
+    <!-- 查询某评论的直接子回复列表（用于GET /comments/{id}/replies） -->
     <select id="findRepliesByParentId" resultMap="commentResultMap">
         SELECT
-            c.id, c.post_id, c.user_id, c.content, c.parent_id,
+            c.id, c.post_id, c.user_id, c.content, c.parent_id, c.root_id, c.reply_to_user_id,
             c.like_count, c.reply_count, c.status, c.created_at, c.updated_at,
             u.id as author_id,
             u.username as author_username,
             u.nickname as author_nickname,
             u.avatar_url as author_avatar_url,
+            ru.id as reply_to_id,
+            ru.username as reply_to_username,
+            ru.nickname as reply_to_nickname,
+            ru.avatar_url as reply_to_avatar_url,
             <if test="currentUserId != null">
                 CASE WHEN EXISTS (
                     SELECT 1 FROM comment_likes cl
@@ -97,13 +119,82 @@
             </if>
         FROM comments c
         INNER JOIN users u ON c.user_id = u.id
+        LEFT JOIN users ru ON c.reply_to_user_id = ru.id
         WHERE c.parent_id = #{parentId}
+          AND c.status = 1
+        ORDER BY c.created_at ASC
+    </select>
+
+    <!-- 查询某一级评论下的所有二级评论（用于评论列表初始加载，最多3条） -->
+    <select id="findTop3RepliesByRootId" resultMap="commentResultMap">
+        SELECT
+            c.id, c.post_id, c.user_id, c.content, c.parent_id, c.root_id, c.reply_to_user_id,
+            c.like_count, c.reply_count, c.status, c.created_at, c.updated_at,
+            u.id as author_id,
+            u.username as author_username,
+            u.nickname as author_nickname,
+            u.avatar_url as author_avatar_url,
+            ru.id as reply_to_id,
+            ru.username as reply_to_username,
+            ru.nickname as reply_to_nickname,
+            ru.avatar_url as reply_to_avatar_url,
+            <if test="currentUserId != null">
+                CASE WHEN EXISTS (
+                    SELECT 1 FROM comment_likes cl
+                    WHERE cl.comment_id = c.id AND cl.user_id = #{currentUserId}
+                ) THEN TRUE ELSE FALSE END as liked
+            </if>
+            <if test="currentUserId == null">
+                FALSE as liked
+            </if>
+        FROM comments c
+        INNER JOIN users u ON c.user_id = u.id
+        LEFT JOIN users ru ON c.reply_to_user_id = ru.id
+        WHERE c.root_id = #{rootId}
           AND c.status = 1
         ORDER BY c.created_at ASC
         LIMIT 3
     </select>
 
-    <!-- 统计某一级评论的子回复数量 -->
+    <!-- 查询某一级评论下的所有二级评论（分页，用于查看更多回复） -->
+    <select id="findRepliesByRootId" resultMap="commentResultMap">
+        SELECT
+            c.id, c.post_id, c.user_id, c.content, c.parent_id, c.root_id, c.reply_to_user_id,
+            c.like_count, c.reply_count, c.status, c.created_at, c.updated_at,
+            u.id as author_id,
+            u.username as author_username,
+            u.nickname as author_nickname,
+            u.avatar_url as author_avatar_url,
+            ru.id as reply_to_id,
+            ru.username as reply_to_username,
+            ru.nickname as reply_to_nickname,
+            ru.avatar_url as reply_to_avatar_url,
+            <if test="currentUserId != null">
+                CASE WHEN EXISTS (
+                    SELECT 1 FROM comment_likes cl
+                    WHERE cl.comment_id = c.id AND cl.user_id = #{currentUserId}
+                ) THEN TRUE ELSE FALSE END as liked
+            </if>
+            <if test="currentUserId == null">
+                FALSE as liked
+            </if>
+        FROM comments c
+        INNER JOIN users u ON c.user_id = u.id
+        LEFT JOIN users ru ON c.reply_to_user_id = ru.id
+        WHERE c.root_id = #{rootId}
+          AND c.status = 1
+        ORDER BY c.created_at ASC
+    </select>
+
+    <!-- 统计某一级评论的二级回复数量 -->
+    <select id="countByRootId" resultType="long">
+        SELECT COUNT(*)
+        FROM comments
+        WHERE root_id = #{rootId}
+          AND status = 1
+    </select>
+
+    <!-- 统计某评论的直接子回复数量（用于精确子评论计数） -->
     <select id="countByParentId" resultType="long">
         SELECT COUNT(*)
         FROM comments
@@ -113,8 +204,8 @@
 
     <!-- 插入评论 -->
     <insert id="insert" parameterType="com.icecream.backend.model.Comment" useGeneratedKeys="true" keyProperty="id">
-        INSERT INTO comments (post_id, user_id, content, parent_id, like_count, reply_count, status)
-        VALUES (#{postId}, #{userId}, #{content}, #{parentId}, #{likeCount}, #{replyCount}, #{status})
+        INSERT INTO comments (post_id, user_id, content, parent_id, root_id, reply_to_user_id, like_count, reply_count, status)
+        VALUES (#{postId}, #{userId}, #{content}, #{parentId}, #{rootId}, #{replyToUserId}, #{likeCount}, #{replyCount}, #{status})
     </insert>
 
     <!-- 更新评论内容 -->
@@ -151,20 +242,20 @@
         WHERE id = #{commentId}
     </update>
 
-    <!-- 增加回复数 -->
+    <!-- 增加一级评论的回复数（通过rootId更新对应的一级评论） -->
     <update id="incrementReplyCount">
         UPDATE comments
         SET reply_count = reply_count + 1,
             updated_at = NOW()
-        WHERE id = #{commentId}
+        WHERE id = #{rootId}
     </update>
 
-    <!-- 减少回复数 -->
+    <!-- 减少一级评论的回复数（通过rootId更新对应的一级评论） -->
     <update id="decrementReplyCount">
         UPDATE comments
         SET reply_count = GREATEST(reply_count - 1, 0),
             updated_at = NOW()
-        WHERE id = #{commentId}
+        WHERE id = #{rootId}
     </update>
 
     <!-- ========== 点赞操作 ========== -->
