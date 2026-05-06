@@ -9,6 +9,7 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.messaging.handler.annotation.MessageMapping;
 import org.springframework.messaging.handler.annotation.Payload;
+import org.springframework.messaging.simp.annotation.SendToUser;
 import org.springframework.stereotype.Controller;
 
 import java.security.Principal;
@@ -33,6 +34,7 @@ public class WebSocketChatController {
      * 需通过 STOMP 会话中的 Principal 获取用户身份
      */
     @MessageMapping("/chat.send")
+    @SendToUser("/queue/ack")
     public Message sendMessage(@Payload ChatMessagePayload payload, Principal principal) {
         String username = principal.getName();
         Optional<User> userOpt = userMapper.findByUsername(username);
