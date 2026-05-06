@@ -1,0 +1,91 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.icecream.backend.mapper.ConversationMapper">
+
+    <!-- 结果映射 -->
+    <resultMap id="conversationResultMap" type="com.icecream.backend.model.Conversation">
+        <id property="id" column="id"/>
+        <result property="user1Id" column="user1_id"/>
+        <result property="user2Id" column="user2_id"/>
+        <result property="lastMessageId" column="last_message_id"/>
+        <result property="lastMessageAt" column="last_message_at"/>
+        <result property="createdAt" column="created_at"/>
+        <result property="updatedAt" column="updated_at"/>
+    </resultMap>
+
+    <!-- 包含其他信息的完整结果映射 -->
+    <resultMap id="conversationWithDetailsResultMap" type="com.icecream.backend.model.Conversation" extends="conversationResultMap">
+        <association property="otherUser" javaType="com.icecream.backend.model.User">
+            <id property="id" column="other_user_id"/>
+            <result property="username" column="other_username"/>
+            <result property="nickname" column="other_nickname"/>
+            <result property="avatarUrl" column="other_avatar_url"/>
+        </association>
+        <association property="lastMessage" javaType="com.icecream.backend.model.Message">
+            <id property="id" column="last_msg_id"/>
+            <result property="content" column="last_msg_content"/>
+            <result property="type" column="last_msg_type"/>
+            <result property="senderId" column="last_msg_sender_id"/>
+            <result property="status" column="last_msg_status"/>
+            <result property="createdAt" column="last_msg_created_at"/>
+        </association>
+    </resultMap>
+
+    <!-- 根据ID查询会话 -->
+    <select id="findById" resultMap="conversationResultMap">
+        SELECT id, user1_id, user2_id, last_message_id, last_message_at, created_at, updated_at
+        FROM conversations
+        WHERE id = #{id}
+    </select>
+
+    <!-- 根据两个用户ID查询会话 -->
+    <select id="findByUserIds" resultMap="conversationResultMap">
+        SELECT id, user1_id, user2_id, last_message_id, last_message_at, created_at, updated_at
+        FROM conversations
+        WHERE user1_id = #{user1Id} AND user2_id = #{user2Id}
+    </select>
+
+    <!-- 查询用户的所有会话（按最后消息时间倒序），包含对方用户信息和最后一条消息 -->
+    <select id="findByUserId" resultMap="conversationWithDetailsResultMap">
+        SELECT
+            c.id, c.user1_id, c.user2_id, c.last_message_id, c.last_message_at, c.created_at, c.updated_at,
+            CASE WHEN c.user1_id = #{userId} THEN c.user2_id ELSE c.user1_id END as other_user_id,
+            u.username as other_username,
+            u.nickname as other_nickname,
+            u.avatar_url as other_avatar_url,
+            m.id as last_msg_id,
+            m.content as last_msg_content,
+            m.type as last_msg_type,
+            m.sender_id as last_msg_sender_id,
+            m.status as last_msg_status,
+            m.created_at as last_msg_created_at
+        FROM conversations c
+        INNER JOIN users u ON u.id = CASE WHEN c.user1_id = #{userId} THEN c.user2_id ELSE c.user1_id END
+        LEFT JOIN messages m ON m.id = c.last_message_id
+        WHERE (c.user1_id = #{userId} OR c.user2_id = #{userId})
+        ORDER BY c.last_message_at DESC
+    </select>
+
+    <!-- 插入会话 -->
+    <insert id="insert" parameterType="com.icecream.backend.model.Conversation" useGeneratedKeys="true" keyProperty="id">
+        INSERT INTO conversations (user1_id, user2_id, last_message_id, last_message_at)
+        VALUES (#{user1Id}, #{user2Id}, #{lastMessageId}, #{lastMessageAt})
+    </insert>
+
+    <!-- 更新会话的最后消息 -->
+    <update id="updateLastMessage">
+        UPDATE conversations
+        SET last_message_id = #{lastMessageId},
+            last_message_at = #{lastMessageAt},
+            updated_at = NOW()
+        WHERE id = #{id}
+    </update>
+
+    <!-- 统计用户的会话数 -->
+    <select id="countByUserId" resultType="long">
+        SELECT COUNT(*)
+        FROM conversations
+        WHERE user1_id = #{userId} OR user2_id = #{userId}
+    </select>
+
+</mapper>

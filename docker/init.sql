@@ -216,3 +216,49 @@ INSERT IGNORE INTO example_table (name, value) VALUES
 ('example1', 'value1'),
 ('example2', 'value2'),
 ('example3', 'value3');
+
+-- ========== 会话表（私聊） ==========
+CREATE TABLE IF NOT EXISTS conversations (
+    id BIGINT PRIMARY KEY AUTO_INCREMENT,
+    user1_id BIGINT NOT NULL COMMENT '用户1ID（较小者）',
+    user2_id BIGINT NOT NULL COMMENT '用户2ID（较大者）',
+    last_message_id BIGINT COMMENT '最后一条消息ID',
+    last_message_at DATETIME COMMENT '最后消息时间',
+    created_at DATETIME DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
+    updated_at DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT '更新时间',
+    UNIQUE KEY uk_user_pair (user1_id, user2_id),
+    INDEX idx_user1_id (user1_id),
+    INDEX idx_user2_id (user2_id),
+    INDEX idx_last_message_at (last_message_at DESC),
+    FOREIGN KEY (user1_id) REFERENCES users(id) ON DELETE CASCADE,
+    FOREIGN KEY (user2_id) REFERENCES users(id) ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='会话表（1v1私聊）';
+
+-- ========== 消息表 ==========
+CREATE TABLE IF NOT EXISTS messages (
+    id BIGINT PRIMARY KEY AUTO_INCREMENT,
+    conversation_id BIGINT NOT NULL COMMENT '所属会话ID',
+    sender_id BIGINT NOT NULL COMMENT '发送者ID',
+    content TEXT NOT NULL COMMENT '消息内容',
+    type TINYINT DEFAULT 1 COMMENT '消息类型：1-文本，2-图片，3-系统消息',
+    status TINYINT DEFAULT 1 COMMENT '状态：1-正常，0-已撤回',
+    created_at DATETIME DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
+    FOREIGN KEY (conversation_id) REFERENCES conversations(id) ON DELETE CASCADE,
+    FOREIGN KEY (sender_id) REFERENCES users(id) ON DELETE CASCADE,
+    INDEX idx_conversation_id (conversation_id),
+    INDEX idx_sender_id (sender_id),
+    INDEX idx_created_at (created_at DESC)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='消息表';
+
+-- ========== 消息未读表 ==========
+CREATE TABLE IF NOT EXISTS message_reads (
+    id BIGINT PRIMARY KEY AUTO_INCREMENT,
+    conversation_id BIGINT NOT NULL COMMENT '会话ID',
+    user_id BIGINT NOT NULL COMMENT '用户ID',
+    last_read_message_id BIGINT COMMENT '最后已读消息ID',
+    last_read_at DATETIME DEFAULT CURRENT_TIMESTAMP COMMENT '最后已读时间',
+    UNIQUE KEY uk_conversation_user (conversation_id, user_id),
+    FOREIGN KEY (conversation_id) REFERENCES conversations(id) ON DELETE CASCADE,
+    FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
+    INDEX idx_user_id (user_id)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='消息已读状态表';
