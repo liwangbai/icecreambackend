@@ -41,6 +41,13 @@ public class WebSocketChatController {
     }
 
     /**
+     * 客户端应用层心跳，STOMP 协议层心跳由 broker 自动维护
+     */
+    @MessageMapping("/heartbeat")
+    public void heartbeat() {
+    }
+
+    /**
      * WebSocket 消息载体
      */
     @lombok.Data
