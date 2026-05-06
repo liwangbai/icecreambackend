@@ -9,6 +9,7 @@ import org.springframework.messaging.simp.stomp.StompCommand;
 import org.springframework.messaging.simp.stomp.StompHeaderAccessor;
 import org.springframework.messaging.support.ChannelInterceptor;
 import org.springframework.messaging.support.MessageHeaderAccessor;
+import org.springframework.security.core.Authentication;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.security.core.context.SecurityContextHolder;
@@ -59,6 +60,9 @@ public class WebSocketAuthInterceptor implements ChannelInterceptor {
                     log.warn("WebSocket认证失败: {}", e.getMessage());
                 }
             }
+        } else if (accessor != null && accessor.getUser() != null) {
+            // 非 CONNECT 帧从 STOMP 会话恢复认证信息到当前线程
+            SecurityContextHolder.getContext().setAuthentication((Authentication) accessor.getUser());
         }
         return message;
     }
