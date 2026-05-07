@@ -74,6 +74,7 @@ public class PostServiceImpl implements PostService {
         post.setIsTop(false);
         post.setViewCount(0);
         post.setLikeCount(0);
+        post.setFavoriteCount(0);
         post.setCommentCount(0);
         post.setPublishedAt(LocalDateTime.now());
 
@@ -259,6 +260,63 @@ public class PostServiceImpl implements PostService {
     }
 
     @Override
+    @Transactional
+    public void favoritePost(Long postId, Long userId) {
+        log.info("收藏帖子: postId={}, userId={}", postId, userId);
+
+        // 检查是否已收藏
+        if (postMapper.existsFavorite(userId, postId)) {
+            throw new RuntimeException("已经收藏过此帖子");
+        }
+
+        // 添加收藏记录
+        postMapper.insertFavorite(userId, postId);
+
+        // 增加帖子收藏数
+        postMapper.incrementFavoriteCount(postId);
+    }
+
+    @Override
+    @Transactional
+    public void unfavoritePost(Long postId, Long userId) {
+        log.info("取消收藏: postId={}, userId={}", postId, userId);
+
+        // 检查是否已收藏
+        if (!postMapper.existsFavorite(userId, postId)) {
+            throw new RuntimeException("尚未收藏此帖子");
+        }
+
+        // 删除收藏记录
+        postMapper.deleteFavorite(userId, postId);
+
+        // 减少帖子收藏数
+        postMapper.decrementFavoriteCount(postId);
+    }
+
+    @Override
+    public boolean isFavorited(Long postId, Long userId) {
+        return postMapper.existsFavorite(userId, postId);
+    }
+
+    @Override
+    public List<Post> getUserFavorites(Long userId) {
+        log.debug("查询用户收藏的帖子: userId={}", userId);
+
+        List<Post> posts = postMapper.findUserFavorites(userId);
+
+        for (Post post : posts) {
+            enrichPostWithBasicAssociations(post, userId);
+        }
+
+        return posts;
+    }
+
+    @Override
+    public long countUserFavorites(Long userId) {
+        return postMapper.countUserFavorites(userId);
+    }
+
+    @Override
     public List<Post> getUserPosts(Long userId, Integer status) {
         log.debug("查询用户帖子: userId={}, status={}", userId, status);
 
@@ -383,13 +441,15 @@ public class PostServiceImpl implements PostService {
             }
         }
 
-        // 设置是否点赞
+        // 设置是否点赞、收藏、关注
         if (currentUserId != null) {
             post.setLiked(postMapper.existsLike(currentUserId, post.getId()));
+            post.setFavorited(postMapper.existsFavorite(currentUserId, post.getId()));
             post.setFollowed(userMapper.existsFollow(currentUserId, post.getUserId()));
             post.setFollowMe(userMapper.existsFollow(post.getUserId(), currentUserId));
         } else {
             post.setLiked(false);
+            post.setFavorited(false);
             post.setFollowed(false);
             post.setFollowMe(false);
         }
@@ -420,11 +480,13 @@ public class PostServiceImpl implements PostService {
             }
         }
 
-        // 设置是否点赞
+        // 设置是否点赞和收藏
         if (currentUserId != null) {
             post.setLiked(postMapper.existsLike(currentUserId, post.getId()));
+            post.setFavorited(postMapper.existsFavorite(currentUserId, post.getId()));
         } else {
             post.setLiked(false);
+            post.setFavorited(false);
         }
     }
 }

@@ -39,6 +39,7 @@ CREATE TABLE IF NOT EXISTS posts (
     cover_image_url VARCHAR(500) COMMENT '封面图片URL',
     view_count INT DEFAULT 0 COMMENT '浏览数',
     like_count INT DEFAULT 0 COMMENT '点赞数',
+    favorite_count INT DEFAULT 0 COMMENT '收藏数',
     comment_count INT DEFAULT 0 COMMENT '评论数',
     status TINYINT DEFAULT 1 COMMENT '状态：0-草稿，1-已发布，2-已删除',
     visibility TINYINT DEFAULT 1 COMMENT '可见性：0-私密，1-公开',
@@ -99,6 +100,19 @@ CREATE TABLE IF NOT EXISTS user_follows (
     INDEX idx_follower_id (follower_id),
     INDEX idx_following_id (following_id)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='用户单向关注关系表';
+
+-- ========== 帖子收藏表 ==========
+CREATE TABLE IF NOT EXISTS post_favorites (
+    id BIGINT PRIMARY KEY AUTO_INCREMENT,
+    user_id BIGINT NOT NULL COMMENT '用户ID',
+    post_id BIGINT NOT NULL COMMENT '帖子ID',
+    created_at DATETIME DEFAULT CURRENT_TIMESTAMP COMMENT '收藏时间',
+    UNIQUE KEY uk_user_post_fav (user_id, post_id),
+    FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
+    FOREIGN KEY (post_id) REFERENCES posts(id) ON DELETE CASCADE,
+    INDEX idx_user_id (user_id),
+    INDEX idx_post_id (post_id)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='帖子收藏表';
 
 -- ========== 帖子点赞表 ==========
 CREATE TABLE IF NOT EXISTS post_likes (

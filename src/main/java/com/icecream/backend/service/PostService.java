@@ -87,6 +87,42 @@ public interface PostService {
     boolean isLiked(Long postId, Long userId);
 
     /**
+     * 收藏帖子
+     * @param postId 帖子ID
+     * @param userId 用户ID
+     */
+    void favoritePost(Long postId, Long userId);
+
+    /**
+     * 取消收藏
+     * @param postId 帖子ID
+     * @param userId 用户ID
+     */
+    void unfavoritePost(Long postId, Long userId);
+
+    /**
+     * 检查用户是否收藏了帖子
+     * @param postId 帖子ID
+     * @param userId 用户ID
+     * @return 是否收藏
+     */
+    boolean isFavorited(Long postId, Long userId);
+
+    /**
+     * 获取用户收藏的帖子列表
+     * @param userId 用户ID
+     * @return 帖子列表
+     */
+    List<Post> getUserFavorites(Long userId);
+
+    /**
+     * 统计用户收藏的帖子数量
+     * @param userId 用户ID
+     * @return 收藏数量
+     */
+    long countUserFavorites(Long userId);
+
+    /**
      * 查询用户发布的帖子
      * @param userId 用户ID
      * @param status 帖子状态（可选，null表示所有状态）

@@ -14,6 +14,7 @@
         <result property="coverImageUrl" column="cover_image_url"/>
         <result property="viewCount" column="view_count"/>
         <result property="likeCount" column="like_count"/>
+        <result property="favoriteCount" column="favorite_count"/>
         <result property="commentCount" column="comment_count"/>
         <result property="status" column="status"/>
         <result property="visibility" column="visibility"/>
@@ -58,6 +59,7 @@
         <result property="coverImageUrl" column="cover_image_url"/>
         <result property="viewCount" column="view_count"/>
         <result property="likeCount" column="like_count"/>
+        <result property="favoriteCount" column="favorite_count"/>
         <result property="commentCount" column="comment_count"/>
         <result property="status" column="status"/>
         <result property="visibility" column="visibility"/>
@@ -75,6 +77,7 @@
         <result property="imageUrls" column="image_urls"/>
         <result property="tags" column="tags"/>
         <result property="liked" column="liked"/>
+        <result property="favorited" column="favorited"/>
         <result property="followed" column="followed"/>
         <result property="followMe" column="follow_me"/>
         <association property="author" javaType="com.icecream.backend.model.User">
@@ -103,11 +106,11 @@
     <insert id="insert" parameterType="com.icecream.backend.model.Post" useGeneratedKeys="true" keyProperty="id">
         INSERT INTO posts (
             user_id, title, content, summary, cover_image_url,
-            view_count, like_count, comment_count, status, visibility, is_top, published_at,
+            view_count, like_count, favorite_count, comment_count, status, visibility, is_top, published_at,
             faction, region, server, body_type, gameplay, target, contact_detail, image_urls, tags
         ) VALUES (
             #{userId}, #{title}, #{content}, #{summary}, #{coverImageUrl},
-            #{viewCount}, #{likeCount}, #{commentCount}, #{status}, #{visibility}, #{isTop}, #{publishedAt},
+            #{viewCount}, #{likeCount}, #{favoriteCount}, #{commentCount}, #{status}, #{visibility}, #{isTop}, #{publishedAt},
             #{faction}, #{region}, #{server}, #{bodyType}, #{gameplay}, #{target}, #{contactDetail}, #{imageUrls}, #{tags}
         )
     </insert>
@@ -122,6 +125,7 @@
             <if test="coverImageUrl != null">cover_image_url = #{coverImageUrl},</if>
             <if test="viewCount != null">view_count = #{viewCount},</if>
             <if test="likeCount != null">like_count = #{likeCount},</if>
+            <if test="favoriteCount != null">favorite_count = #{favoriteCount},</if>
             <if test="commentCount != null">comment_count = #{commentCount},</if>
             <if test="status != null">status = #{status},</if>
             <if test="visibility != null">visibility = #{visibility},</if>
@@ -152,7 +156,7 @@
     <select id="findByCondition" parameterType="com.icecream.backend.dto.request.PostQueryRequest" resultMap="postListResultMap">
         SELECT
             p.id, p.user_id, p.title, p.content, p.summary, p.cover_image_url,
-            p.view_count, p.like_count, p.comment_count, p.status, p.visibility,
+            p.view_count, p.like_count, p.favorite_count, p.comment_count, p.status, p.visibility,
             p.is_top, p.published_at, p.created_at, p.updated_at,
             p.faction, p.region, p.server, p.body_type, p.gameplay,
             p.target, p.contact_detail, p.image_urls, p.tags,
@@ -164,6 +168,10 @@
                 SELECT 1 FROM post_likes pl
                 WHERE pl.post_id = p.id AND pl.user_id = #{query.currentUserId}
             ) THEN TRUE ELSE FALSE END as liked,
+            CASE WHEN EXISTS (
+                SELECT 1 FROM post_favorites pf
+                WHERE pf.post_id = p.id AND pf.user_id = #{query.currentUserId}
+            ) THEN TRUE ELSE FALSE END as favorited,
             CASE WHEN EXISTS (
                 SELECT 1 FROM user_follows uf
                 WHERE uf.follower_id = #{query.currentUserId} AND uf.following_id = p.user_id
@@ -320,15 +328,20 @@
             u.username as author_username,
             u.nickname as author_nickname,
             u.avatar_url as author_avatar_url,
-            <!-- 判断当前用户是否点赞 -->
+            <!-- 判断当前用户是否点赞和收藏 -->
             <if test="userId != null">
                 CASE WHEN EXISTS (
                     SELECT 1 FROM post_likes pl
                     WHERE pl.post_id = p.id AND pl.user_id = #{userId}
-                ) THEN TRUE ELSE FALSE END as liked
+                ) THEN TRUE ELSE FALSE END as liked,
+                CASE WHEN EXISTS (
+                    SELECT 1 FROM post_favorites pf
+                    WHERE pf.post_id = p.id AND pf.user_id = #{userId}
+                ) THEN TRUE ELSE FALSE END as favorited
             </if>
             <if test="userId == null">
-                FALSE as liked
+                FALSE as liked,
+                FALSE as favorited
             </if>
         FROM posts p
         INNER JOIN users u ON p.user_id = u.id
@@ -372,7 +385,7 @@
     <select id="findByTagName" resultMap="postListResultMap">
         SELECT
             p.id, p.user_id, p.title, p.content, p.summary, p.cover_image_url,
-            p.view_count, p.like_count, p.comment_count, p.status, p.visibility,
+            p.view_count, p.like_count, p.favorite_count, p.comment_count, p.status, p.visibility,
             p.is_top, p.published_at, p.created_at, p.updated_at,
             p.faction, p.region, p.server, p.body_type, p.gameplay,
             p.target, p.contact_detail, p.image_urls, p.tags,
@@ -386,6 +399,10 @@
                     WHERE pl.post_id = p.id AND pl.user_id = #{currentUserId}
                 ) THEN TRUE ELSE FALSE END as liked,
                 CASE WHEN EXISTS (
+                    SELECT 1 FROM post_favorites pf
+                    WHERE pf.post_id = p.id AND pf.user_id = #{currentUserId}
+                ) THEN TRUE ELSE FALSE END as favorited,
+                CASE WHEN EXISTS (
                     SELECT 1 FROM user_follows uf
                     WHERE uf.follower_id = #{currentUserId} AND uf.following_id = p.user_id
                 ) THEN TRUE ELSE FALSE END as followed,
@@ -396,6 +413,7 @@
             </if>
             <if test="currentUserId == null">
                 FALSE as liked,
+                FALSE as favorited,
                 FALSE as followed,
                 FALSE as follow_me
             </if>
@@ -438,5 +456,96 @@
         WHERE user_id = #{userId}
           AND post_id = #{postId}
     </delete>
+
+    <!-- ========== 收藏相关操作 ========== -->
+
+    <!-- 检查用户是否收藏了帖子 -->
+    <select id="existsFavorite" resultType="boolean">
+        SELECT COUNT(*) > 0
+        FROM post_favorites
+        WHERE user_id = #{userId}
+          AND post_id = #{postId}
+    </select>
+
+    <!-- 添加收藏记录 -->
+    <insert id="insertFavorite">
+        INSERT IGNORE INTO post_favorites (user_id, post_id)
+        VALUES (#{userId}, #{postId})
+    </insert>
+
+    <!-- 删除收藏记录 -->
+    <delete id="deleteFavorite">
+        DELETE FROM post_favorites
+        WHERE user_id = #{userId}
+          AND post_id = #{postId}
+    </delete>
+
+    <!-- 增加帖子收藏数 -->
+    <update id="incrementFavoriteCount">
+        UPDATE posts
+        SET favorite_count = favorite_count + 1,
+            updated_at = NOW()
+        WHERE id = #{postId}
+    </update>
+
+    <!-- 减少帖子收藏数 -->
+    <update id="decrementFavoriteCount">
+        UPDATE posts
+        SET favorite_count = GREATEST(favorite_count - 1, 0),
+            updated_at = NOW()
+        WHERE id = #{postId}
+    </update>
+
+    <!-- 查询用户收藏的帖子 -->
+    <select id="findUserFavorites" resultMap="postListResultMap">
+        SELECT
+            p.id, p.user_id, p.title, p.content, p.summary, p.cover_image_url,
+            p.view_count, p.like_count, p.favorite_count, p.comment_count, p.status, p.visibility,
+            p.is_top, p.published_at, p.created_at, p.updated_at,
+            p.faction, p.region, p.server, p.body_type, p.gameplay,
+            p.target, p.contact_detail, p.image_urls, p.tags,
+            u.id as author_id,
+            u.username as author_username,
+            u.nickname as author_nickname,
+            u.avatar_url as author_avatar_url,
+            <if test="userId != null">
+                CASE WHEN EXISTS (
+                    SELECT 1 FROM post_likes pl
+                    WHERE pl.post_id = p.id AND pl.user_id = #{userId}
+                ) THEN TRUE ELSE FALSE END as liked,
+                TRUE as favorited,
+                CASE WHEN EXISTS (
+                    SELECT 1 FROM user_follows uf
+                    WHERE uf.follower_id = #{userId} AND uf.following_id = p.user_id
+                ) THEN TRUE ELSE FALSE END as followed,
+                CASE WHEN EXISTS (
+                    SELECT 1 FROM user_follows uf
+                    WHERE uf.follower_id = p.user_id AND uf.following_id = #{userId}
+                ) THEN TRUE ELSE FALSE END as follow_me
+            </if>
+            <if test="userId == null">
+                FALSE as liked,
+                FALSE as favorited,
+                FALSE as followed,
+                FALSE as follow_me
+            </if>
+        FROM posts p
+        INNER JOIN post_favorites pf ON p.id = pf.post_id
+        INNER JOIN users u ON p.user_id = u.id
+        WHERE pf.user_id = #{userId}
+          AND p.status = 1
+          AND p.visibility = 1
+        ORDER BY pf.created_at DESC
+    </select>
+
+    <!-- 统计用户收藏的帖子数量 -->
+    <select id="countUserFavorites" resultType="long">
+        SELECT COUNT(*)
+        FROM post_favorites pf
+        INNER JOIN posts p ON pf.post_id = p.id
+        WHERE pf.user_id = #{userId}
+          AND p.status = 1
+          AND p.visibility = 1
+    </select>
 
 </mapper>

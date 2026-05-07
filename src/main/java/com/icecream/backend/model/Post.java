@@ -49,6 +49,11 @@ public class Post extends BaseEntity {
     private Integer likeCount;
 
     /**
+     * 收藏数
+     */
+    private Integer favoriteCount;
+
+    /**
      * 评论数
      */
     private Integer commentCount;
@@ -141,6 +146,11 @@ public class Post extends BaseEntity {
      * 当前用户是否点赞（需要当前用户ID上下文）
      */
     private Boolean liked;
+
+    /**
+     * 当前用户是否收藏（需要当前用户ID上下文）
+     */
+    private Boolean favorited;
 
     /**
      * 当前用户是否关注了发帖人

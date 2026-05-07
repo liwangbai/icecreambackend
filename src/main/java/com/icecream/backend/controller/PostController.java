@@ -141,6 +141,50 @@ public class PostController {
         return ResponseEntity.ok(ApiResponse.success("检查成功", isLiked));
     }
 
+    @PostMapping("/{postId}/favorite")
+    @Operation(summary = "收藏帖子", description = "收藏指定帖子")
+    public ResponseEntity<ApiResponse<Void>> favoritePost(@PathVariable Long postId) {
+        Long currentUserId = SecurityUtil.getCurrentUserId();
+        log.info("收藏帖子: postId={}, userId={}", postId, currentUserId);
+        postService.favoritePost(postId, currentUserId);
+        return ResponseEntity.ok(ApiResponse.success("收藏成功"));
+    }
+
+    @DeleteMapping("/{postId}/favorite")
+    @Operation(summary = "取消收藏", description = "取消对指定帖子的收藏")
+    public ResponseEntity<ApiResponse<Void>> unfavoritePost(@PathVariable Long postId) {
+        Long currentUserId = SecurityUtil.getCurrentUserId();
+        log.info("取消收藏: postId={}, userId={}", postId, currentUserId);
+        postService.unfavoritePost(postId, currentUserId);
+        return ResponseEntity.ok(ApiResponse.success("取消收藏成功"));
+    }
+
+    @GetMapping("/{postId}/is-favorited")
+    @Operation(summary = "检查是否收藏", description = "检查当前用户是否收藏了指定帖子")
+    public ResponseEntity<ApiResponse<Boolean>> isFavorited(@PathVariable Long postId) {
+        Long currentUserId = SecurityUtil.getCurrentUserId();
+        log.debug("检查是否收藏: postId={}, userId={}", postId, currentUserId);
+        boolean isFavorited = postService.isFavorited(postId, currentUserId);
+        return ResponseEntity.ok(ApiResponse.success("检查成功", isFavorited));
+    }
+
+    @GetMapping("/favorites")
+    @Operation(summary = "获取收藏列表", description = "获取当前用户收藏的帖子列表，支持分页")
+    public ResponseEntity<ApiResponse<PagedResult<Post>>> getUserFavorites(
+            @Parameter(description = "页码，从0开始") @RequestParam(required = false, defaultValue = "0") Integer page,
+            @Parameter(description = "每页大小") @RequestParam(required = false, defaultValue = "20") Integer size) {
+        Long currentUserId = SecurityUtil.getCurrentUserId();
+        log.debug("获取用户收藏列表: userId={}, page={}, size={}", currentUserId, page, size);
+
+        // 使用PageHelper分页
+        com.github.pagehelper.PageHelper.startPage(page + 1, size);
+        List<Post> posts = postService.getUserFavorites(currentUserId);
+        long total = postService.countUserFavorites(currentUserId);
+
+        PagedResult<Post> pagedResult = PagedResult.of(posts, total, page, size);
+        return ResponseEntity.ok(ApiResponse.success("获取成功", pagedResult));
+    }
+
     @GetMapping("/user/{userId}")
     @Operation(summary = "获取用户帖子", description = "获取指定用户发布的帖子")
     public ResponseEntity<ApiResponse<List<Post>>> getUserPosts(

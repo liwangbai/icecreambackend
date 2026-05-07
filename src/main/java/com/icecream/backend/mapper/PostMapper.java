@@ -175,4 +175,58 @@ public interface PostMapper {
      * @return 影响的行数
      */
     int deleteLike(@Param("userId") Long userId, @Param("postId") Long postId);
+
+    // ========== 收藏相关操作 ==========
+
+    /**
+     * 检查用户是否收藏了帖子
+     * @param userId 用户ID
+     * @param postId 帖子ID
+     * @return 是否收藏
+     */
+    boolean existsFavorite(@Param("userId") Long userId, @Param("postId") Long postId);
+
+    /**
+     * 添加收藏记录
+     * @param userId 用户ID
+     * @param postId 帖子ID
+     * @return 影响的行数
+     */
+    int insertFavorite(@Param("userId") Long userId, @Param("postId") Long postId);
+
+    /**
+     * 删除收藏记录
+     * @param userId 用户ID
+     * @param postId 帖子ID
+     * @return 影响的行数
+     */
+    int deleteFavorite(@Param("userId") Long userId, @Param("postId") Long postId);
+
+    /**
+     * 增加帖子收藏数
+     * @param postId 帖子ID
+     * @return 影响的行数
+     */
+    int incrementFavoriteCount(@Param("postId") Long postId);
+
+    /**
+     * 减少帖子收藏数
+     * @param postId 帖子ID
+     * @return 影响的行数
+     */
+    int decrementFavoriteCount(@Param("postId") Long postId);
+
+    /**
+     * 查询用户收藏的帖子（支持分页）
+     * @param userId 用户ID
+     * @return 帖子列表
+     */
+    List<Post> findUserFavorites(@Param("userId") Long userId);
+
+    /**
+     * 统计用户收藏的帖子数量
+     * @param userId 用户ID
+     * @return 收藏数量
+     */
+    long countUserFavorites(@Param("userId") Long userId);
 }
