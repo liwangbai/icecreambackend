@@ -548,4 +548,94 @@
           AND p.visibility = 1
     </select>
 
+    <!-- ========== 互动通知查询 ========== -->
+
+    <!-- 互动通知结果映射（显式指定javaType，避免UNION查询中JDBC驱动将数值误报为DECIMAL/DOUBLE） -->
+    <resultMap id="interactionNotificationMap" type="com.icecream.backend.dto.response.InteractionNotification">
+        <result property="type" column="type" javaType="String"/>
+        <result property="fromUserId" column="from_user_id" javaType="Long"/>
+        <result property="fromNickname" column="from_nickname" javaType="String"/>
+        <result property="fromAvatarUrl" column="from_avatar_url" javaType="String"/>
+        <result property="targetId" column="target_id" javaType="Long"/>
+        <result property="targetTitle" column="target_title" javaType="String"/>
+        <result property="postId" column="post_id" javaType="Long"/>
+        <result property="createdAt" column="created_at" javaType="java.time.LocalDateTime"/>
+    </resultMap>
+
+    <!-- 查询对当前用户内容的互动列表（帖子点赞 + 评论点赞 + 帖子收藏，UNION合并按时间倒序） -->
+    <select id="findInteractionsOnMyContent" resultMap="interactionNotificationMap">
+        SELECT * FROM (
+            SELECT
+                'post_like' as type,
+                u.id as from_user_id,
+                u.nickname as from_nickname,
+                u.avatar_url as from_avatar_url,
+                p.id as target_id,
+                COALESCE(p.title, '') as target_title,
+                p.id as post_id,
+                pl.created_at
+            FROM post_likes pl
+            INNER JOIN users u ON pl.user_id = u.id
+            INNER JOIN posts p ON pl.post_id = p.id
+            WHERE p.user_id = #{userId} AND pl.user_id != #{userId}
+
+            UNION ALL
+
+            SELECT
+                'comment_like' as type,
+                u.id as from_user_id,
+                u.nickname as from_nickname,
+                u.avatar_url as from_avatar_url,
+                c.id as target_id,
+                COALESCE(SUBSTRING(c.content, 1, 100), '') as target_title,
+                c.post_id as post_id,
+                cl.created_at
+            FROM comment_likes cl
+            INNER JOIN users u ON cl.user_id = u.id
+            INNER JOIN comments c ON cl.comment_id = c.id
+            WHERE c.user_id = #{userId} AND cl.user_id != #{userId}
+
+            UNION ALL
+
+            SELECT
+                'post_favorite' as type,
+                u.id as from_user_id,
+                u.nickname as from_nickname,
+                u.avatar_url as from_avatar_url,
+                p.id as target_id,
+                COALESCE(p.title, '') as target_title,
+                p.id as post_id,
+                pf.created_at
+            FROM post_favorites pf
+            INNER JOIN users u ON pf.user_id = u.id
+            INNER JOIN posts p ON pf.post_id = p.id
+            WHERE p.user_id = #{userId} AND pf.user_id != #{userId}
+        ) AS interactions
+        ORDER BY created_at DESC
+    </select>
+
+    <!-- 统计对当前用户内容的互动数量 -->
+    <select id="countInteractionsOnMyContent" resultType="long">
+        SELECT COUNT(*) FROM (
+            SELECT pl.user_id
+            FROM post_likes pl
+            INNER JOIN posts p ON pl.post_id = p.id
+            WHERE p.user_id = #{userId} AND pl.user_id != #{userId}
+
+            UNION ALL
+
+            SELECT cl.user_id
+            FROM comment_likes cl
+            INNER JOIN comments c ON cl.comment_id = c.id
+            WHERE c.user_id = #{userId} AND cl.user_id != #{userId}
+
+            UNION ALL
+
+            SELECT pf.user_id
+            FROM post_favorites pf
+            INNER JOIN posts p ON pf.post_id = p.id
+            WHERE p.user_id = #{userId} AND pf.user_id != #{userId}
+        ) AS interactions
+    </select>
+
 </mapper>

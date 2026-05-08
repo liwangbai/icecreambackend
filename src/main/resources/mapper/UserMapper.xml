@@ -194,4 +194,40 @@
         LIMIT 1
     </select>
 
+    <!-- ========== 关注通知查询 ========== -->
+
+    <!-- 关注通知结果映射（显式指定javaType） -->
+    <resultMap id="followNotificationMap" type="com.icecream.backend.dto.response.FollowNotification">
+        <result property="userId" column="user_id" javaType="Long"/>
+        <result property="nickname" column="nickname" javaType="String"/>
+        <result property="avatarUrl" column="avatar_url" javaType="String"/>
+        <result property="followedAt" column="followed_at" javaType="java.time.LocalDateTime"/>
+        <result property="followedBack" column="followed_back" javaType="Boolean"/>
+    </resultMap>
+
+    <!-- 查询粉丝列表（带是否回关标志） -->
+    <select id="findFollowersWithStatus" resultMap="followNotificationMap">
+        SELECT
+            u.id as user_id,
+            u.nickname as nickname,
+            u.avatar_url as avatar_url,
+            uf.created_at as followed_at,
+            CASE WHEN EXISTS (
+                SELECT 1 FROM user_follows uf2
+                WHERE uf2.follower_id = #{userId}
+                  AND uf2.following_id = u.id
+            ) THEN TRUE ELSE FALSE END as followed_back
+        FROM users u
+        INNER JOIN user_follows uf ON u.id = uf.follower_id
+        WHERE uf.following_id = #{userId}
+        ORDER BY uf.created_at DESC
+    </select>
+
+    <!-- 统计粉丝数量 -->
+    <select id="countFollowersWithStatus" resultType="long">
+        SELECT COUNT(*)
+        FROM user_follows uf
+        WHERE uf.following_id = #{userId}
+    </select>
+
 </mapper>

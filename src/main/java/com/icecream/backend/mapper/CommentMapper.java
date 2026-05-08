@@ -102,4 +102,18 @@ public interface CommentMapper {
      * 删除评论点赞记录
      */
     int deleteLike(@Param("userId") Long userId, @Param("commentId") Long commentId);
+
+    /**
+     * 查询评论和@通知列表（评论我的帖子 + @我的回复，UNION合并按时间倒序）
+     * @param userId 当前用户ID
+     * @return 评论通知列表
+     */
+    List<com.icecream.backend.dto.response.CommentNotification> findCommentsAndMentions(@Param("userId") Long userId);
+
+    /**
+     * 统计评论和@通知数量
+     * @param userId 当前用户ID
+     * @return 通知数量
+     */
+    long countCommentsAndMentions(@Param("userId") Long userId);
 }

@@ -281,4 +281,83 @@
           AND comment_id = #{commentId}
     </delete>
 
+    <!-- ========== 评论通知查询 ========== -->
+
+    <!-- 评论通知结果映射（显式指定javaType，避免UNION查询中JDBC驱动将数值误报为DECIMAL/DOUBLE） -->
+    <resultMap id="commentNotificationMap" type="com.icecream.backend.dto.response.CommentNotification">
+        <result property="type" column="type" javaType="String"/>
+        <result property="fromUserId" column="from_user_id" javaType="Long"/>
+        <result property="fromNickname" column="from_nickname" javaType="String"/>
+        <result property="fromAvatarUrl" column="from_avatar_url" javaType="String"/>
+        <result property="postId" column="post_id" javaType="Long"/>
+        <result property="postTitle" column="post_title" javaType="String"/>
+        <result property="commentId" column="comment_id" javaType="Long"/>
+        <result property="commentContent" column="comment_content" javaType="String"/>
+        <result property="createdAt" column="created_at" javaType="java.time.LocalDateTime"/>
+    </resultMap>
+
+    <!-- 查询评论和@通知列表（评论我的帖子 + @我的回复，UNION合并按时间倒序） -->
+    <select id="findCommentsAndMentions" resultMap="commentNotificationMap">
+        SELECT * FROM (
+            SELECT
+                'comment' as type,
+                u.id as from_user_id,
+                u.nickname as from_nickname,
+                u.avatar_url as from_avatar_url,
+                p.id as post_id,
+                COALESCE(p.title, '') as post_title,
+                c.id as comment_id,
+                COALESCE(SUBSTRING(c.content, 1, 100), '') as comment_content,
+                c.created_at
+            FROM comments c
+            INNER JOIN users u ON c.user_id = u.id
+            INNER JOIN posts p ON c.post_id = p.id
+            WHERE p.user_id = #{userId}
+              AND c.user_id != #{userId}
+              AND c.status = 1
+              AND c.parent_id IS NULL
+
+            UNION ALL
+
+            SELECT
+                'reply' as type,
+                u.id as from_user_id,
+                u.nickname as from_nickname,
+                u.avatar_url as from_avatar_url,
+                p.id as post_id,
+                COALESCE(p.title, '') as post_title,
+                c.id as comment_id,
+                COALESCE(SUBSTRING(c.content, 1, 100), '') as comment_content,
+                c.created_at
+            FROM comments c
+            INNER JOIN users u ON c.user_id = u.id
+            INNER JOIN posts p ON c.post_id = p.id
+            WHERE c.reply_to_user_id = #{userId}
+              AND c.user_id != #{userId}
+              AND c.status = 1
+        ) AS comment_notifications
+        ORDER BY created_at DESC
+    </select>
+
+    <!-- 统计评论和@通知数量 -->
+    <select id="countCommentsAndMentions" resultType="long">
+        SELECT COUNT(*) FROM (
+            SELECT c.id
+            FROM comments c
+            INNER JOIN posts p ON c.post_id = p.id
+            WHERE p.user_id = #{userId}
+              AND c.user_id != #{userId}
+              AND c.status = 1
+              AND c.parent_id IS NULL
+
+            UNION ALL
+
+            SELECT c.id
+            FROM comments c
+            WHERE c.reply_to_user_id = #{userId}
+              AND c.user_id != #{userId}
+              AND c.status = 1
+        ) AS comment_notifications
+    </select>
+
 </mapper>

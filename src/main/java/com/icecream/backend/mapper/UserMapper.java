@@ -161,4 +161,18 @@ public interface UserMapper {
      * @return 用户信息（Optional）
      */
     Optional<User> findByUsernameOrEmail(@Param("usernameOrEmail") String usernameOrEmail);
+
+    /**
+     * 查询粉丝列表（带是否回关标志）
+     * @param userId 当前用户ID
+     * @return 关注通知列表
+     */
+    List<com.icecream.backend.dto.response.FollowNotification> findFollowersWithStatus(@Param("userId") Long userId);
+
+    /**
+     * 统计粉丝数量
+     * @param userId 当前用户ID
+     * @return 粉丝数量
+     */
+    long countFollowersWithStatus(@Param("userId") Long userId);
 }
