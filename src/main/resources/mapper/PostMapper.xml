@@ -208,7 +208,7 @@
                 AND p.gameplay = #{query.gameplay}
             </if>
             <if test="query.tag != null and query.tag != ''">
-                AND p.tags LIKE CONCAT('%', #{query.tag}, '%')
+                AND JSON_CONTAINS(p.tags, CONCAT('"', #{query.tag}, '"'))
             </if>
         </where>
         <choose>
@@ -261,7 +261,7 @@
                 AND p.gameplay = #{query.gameplay}
             </if>
             <if test="query.tag != null and query.tag != ''">
-                AND p.tags LIKE CONCAT('%', #{query.tag}, '%')
+                AND JSON_CONTAINS(p.tags, CONCAT('"', #{query.tag}, '"'))
             </if>
         </where>
     </select>
@@ -379,6 +379,7 @@
           AND published_at >= DATE_SUB(NOW(), INTERVAL #{days} DAY)
           AND tags IS NOT NULL
           AND tags != '[]'
+        LIMIT 2000
     </select>
 
     <!-- 根据标签名精确查询帖子（JSON_CONTAINS匹配） -->

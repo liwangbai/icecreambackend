@@ -17,6 +17,7 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
+import com.github.pagehelper.Page;
 import jakarta.validation.Valid;
 import java.util.List;
 
@@ -186,23 +187,33 @@ public class PostController {
     }
 
     @GetMapping("/user/{userId}")
-    @Operation(summary = "获取用户帖子", description = "获取指定用户发布的帖子")
-    public ResponseEntity<ApiResponse<List<Post>>> getUserPosts(
+    @Operation(summary = "获取用户帖子", description = "获取指定用户发布的帖子，支持分页")
+    public ResponseEntity<ApiResponse<PagedResult<Post>>> getUserPosts(
             @PathVariable Long userId,
             @Parameter(description = "帖子状态: 0-草稿, 1-已发布, 2-已删除")
-            @RequestParam(required = false) Integer status) {
-        log.debug("获取用户帖子: userId={}, status={}", userId, status);
+            @RequestParam(required = false) Integer status,
+            @Parameter(description = "页码，从0开始") @RequestParam(required = false, defaultValue = "0") Integer page,
+            @Parameter(description = "每页大小") @RequestParam(required = false, defaultValue = "20") Integer size) {
+        log.debug("获取用户帖子: userId={}, status={}, page={}, size={}", userId, status, page, size);
+        com.github.pagehelper.PageHelper.startPage(page + 1, size);
         List<Post> posts = postService.getUserPosts(userId, status);
-        return ResponseEntity.ok(ApiResponse.success("获取成功", posts));
+        long total = ((Page) posts).getTotal();
+        PagedResult<Post> pagedResult = PagedResult.of(posts, total, page, size);
+        return ResponseEntity.ok(ApiResponse.success("获取成功", pagedResult));
     }
 
     @GetMapping("/following")
-    @Operation(summary = "获取关注用户帖子", description = "获取当前用户关注的用户发布的帖子（时间线）")
-    public ResponseEntity<ApiResponse<List<Post>>> getFollowingPosts() {
+    @Operation(summary = "获取关注用户帖子", description = "获取当前用户关注的用户发布的帖子（时间线），支持分页")
+    public ResponseEntity<ApiResponse<PagedResult<Post>>> getFollowingPosts(
+            @Parameter(description = "页码，从0开始") @RequestParam(required = false, defaultValue = "0") Integer page,
+            @Parameter(description = "每页大小") @RequestParam(required = false, defaultValue = "20") Integer size) {
         Long currentUserId = SecurityUtil.getCurrentUserId();
-        log.debug("获取关注用户帖子: userId={}", currentUserId);
+        log.debug("获取关注用户帖子: userId={}, page={}, size={}", currentUserId, page, size);
+        com.github.pagehelper.PageHelper.startPage(page + 1, size);
         List<Post> posts = postService.getFollowingPosts(currentUserId);
-        return ResponseEntity.ok(ApiResponse.success("获取成功", posts));
+        long total = ((Page) posts).getTotal();
+        PagedResult<Post> pagedResult = PagedResult.of(posts, total, page, size);
+        return ResponseEntity.ok(ApiResponse.success("获取成功", pagedResult));
     }
 
     @GetMapping("/hot-tags")

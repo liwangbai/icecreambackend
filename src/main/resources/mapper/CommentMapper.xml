@@ -156,6 +156,42 @@
         LIMIT 3
     </select>
 
+    <!-- 批量查询多个一级评论下的前3条二级回复 -->
+    <select id="findTop3RepliesByRootIds" resultMap="commentResultMap">
+        SELECT * FROM (
+            SELECT
+                c.id, c.post_id, c.user_id, c.content, c.parent_id, c.root_id, c.reply_to_user_id,
+                c.like_count, c.reply_count, c.status, c.created_at, c.updated_at,
+                u.id as author_id,
+                u.username as author_username,
+                u.nickname as author_nickname,
+                u.avatar_url as author_avatar_url,
+                ru.id as reply_to_id,
+                ru.username as reply_to_username,
+                ru.nickname as reply_to_nickname,
+                ru.avatar_url as reply_to_avatar_url,
+                <if test="currentUserId != null">
+                    CASE WHEN EXISTS (
+                        SELECT 1 FROM comment_likes cl
+                        WHERE cl.comment_id = c.id AND cl.user_id = #{currentUserId}
+                    ) THEN TRUE ELSE FALSE END as liked,
+                </if>
+                <if test="currentUserId == null">
+                    FALSE as liked,
+                </if>
+                ROW_NUMBER() OVER (PARTITION BY c.root_id ORDER BY c.created_at ASC) AS rn
+            FROM comments c
+            INNER JOIN users u ON c.user_id = u.id
+            LEFT JOIN users ru ON c.reply_to_user_id = ru.id
+            WHERE c.root_id IN
+            <foreach collection="rootIds" item="rootId" open="(" separator="," close=")">
+                #{rootId}
+            </foreach>
+              AND c.status = 1
+        ) sub WHERE rn &lt;= 3
+        ORDER BY root_id, created_at ASC
+    </select>
+
     <!-- 查询某一级评论下的所有二级评论（分页，用于查看更多回复） -->
     <select id="findRepliesByRootId" resultMap="commentResultMap">
         SELECT

@@ -12,6 +12,8 @@ import com.icecream.backend.service.PostService;
 import com.github.pagehelper.PageHelper;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.cache.annotation.CacheEvict;
+import org.springframework.cache.annotation.Cacheable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -37,6 +39,7 @@ public class PostServiceImpl implements PostService {
 
     @Override
     @Transactional
+    @CacheEvict(value = "hotTags", allEntries = true)
     public Post createPost(Long userId, PostCreateRequest request) {
         log.info("创建帖子: userId={}, content={}", userId, request.getContent());
 
@@ -113,6 +116,7 @@ public class PostServiceImpl implements PostService {
 
     @Override
     @Transactional
+    @CacheEvict(value = "hotTags", allEntries = true)
     public Post updatePost(Long postId, Long userId, PostUpdateRequest request) {
         log.info("更新帖子: postId={}, userId={}", postId, userId);
 
@@ -178,6 +182,7 @@ public class PostServiceImpl implements PostService {
 
     @Override
     @Transactional
+    @CacheEvict(value = "hotTags", allEntries = true)
     public void deletePost(Long postId, Long userId) {
         log.info("删除帖子: postId={}, userId={}", postId, userId);
 
@@ -207,9 +212,9 @@ public class PostServiceImpl implements PostService {
         // 执行查询
         List<Post> posts = postMapper.findByCondition(query);
 
-        // 为每个帖子设置关联信息
+        // SQL已通过postListResultMap返回作者和点赞/收藏/关注状态，此处仅解析JSON字段
         for (Post post : posts) {
-            enrichPostWithAssociations(post, query.getCurrentUserId());
+            enrichPostMetadata(post);
         }
 
         return posts;
@@ -305,7 +310,7 @@ public class PostServiceImpl implements PostService {
         List<Post> posts = postMapper.findUserFavorites(userId);
 
         for (Post post : posts) {
-            enrichPostWithBasicAssociations(post, userId);
+            enrichPostMetadata(post);
         }
 
         return posts;
@@ -336,9 +341,8 @@ public class PostServiceImpl implements PostService {
 
         List<Post> posts = postMapper.findFollowingPosts(userId);
 
-        // 为每个帖子设置基本关联信息
         for (Post post : posts) {
-            enrichPostWithBasicAssociations(post, userId);
+            enrichPostMetadata(post);
         }
 
         return posts;
@@ -359,6 +363,7 @@ public class PostServiceImpl implements PostService {
     }
 
     @Override
+    @Cacheable(value = "hotTags", key = "#days + '-' + #limit")
     public List<HotTagDTO> getHotTags(int days, int limit) {
         log.debug("获取热门标签: days={}, limit={}", days, limit);
 
@@ -400,7 +405,7 @@ public class PostServiceImpl implements PostService {
         List<Post> posts = postMapper.findByTagName(tagName, currentUserId);
 
         for (Post post : posts) {
-            enrichPostWithBasicAssociations(post, currentUserId);
+            enrichPostMetadata(post);
         }
 
         return posts;
@@ -412,6 +417,30 @@ public class PostServiceImpl implements PostService {
     }
 
     // ========== 私有方法 ==========
+
+    /**
+     * 仅解析帖子的JSON字段（imageUrls、tags），不访问数据库
+     * 适用于SQL已通过postListResultMap返回作者和点赞/收藏/关注状态的场景
+     */
+    private void enrichPostMetadata(Post post) {
+        if (post.getImageUrls() != null && !post.getImageUrls().isEmpty()) {
+            try {
+                post.setImageUrlList(objectMapper.readValue(post.getImageUrls(),
+                    objectMapper.getTypeFactory().constructCollectionType(List.class, String.class)));
+            } catch (JsonProcessingException e) {
+                log.warn("解析图片链接失败: {}", post.getImageUrls());
+            }
+        }
+
+        if (post.getTags() != null && !post.getTags().isEmpty()) {
+            try {
+                post.setTagList(objectMapper.readValue(post.getTags(),
+                    objectMapper.getTypeFactory().constructCollectionType(List.class, String.class)));
+            } catch (JsonProcessingException e) {
+                log.warn("解析标签失败: {}", post.getTags());
+            }
+        }
+    }
 
     /**
      * 丰富帖子信息（包含作者、标签等关联信息）

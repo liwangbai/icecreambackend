@@ -36,7 +36,7 @@ spring:
 # MyBatis开发配置
 mybatis:
   configuration:
-    log-impl: org.apache.ibatis.logging.stdout.StdOutImpl
+    log-impl: org.apache.ibatis.logging.slf4j.Slf4jImpl
     lazy-loading-enabled: true
     aggressive-lazy-loading: false
 

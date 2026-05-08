@@ -20,8 +20,8 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDateTime;
-import java.util.List;
-import java.util.Optional;
+import java.util.*;
+import java.util.stream.Collectors;
 
 /**
  * 聊天服务实现类
@@ -91,9 +91,8 @@ public class ChatServiceImpl implements ChatService {
     public List<Conversation> getConversations(Long userId) {
         log.debug("获取会话列表: userId={}", userId);
         List<Conversation> conversations = conversationMapper.findByUserId(userId);
-        for (Conversation conv : conversations) {
-            fillOtherUser(conv, userId);
-            fillUnreadCount(conv, userId);
+        if (!conversations.isEmpty()) {
+            fillUnreadCounts(conversations, userId);
         }
         return conversations;
     }
@@ -237,11 +236,13 @@ public class ChatServiceImpl implements ChatService {
     @Override
     public long getTotalUnreadCount(Long userId) {
         List<Conversation> conversations = conversationMapper.findByUserId(userId);
-        long total = 0;
-        for (Conversation conv : conversations) {
-            total += getUnreadCount(conv.getId(), userId);
+        if (conversations.isEmpty()) {
+            return 0;
         }
-        return total;
+        List<Long> conversationIds = conversations.stream()
+                .map(Conversation::getId).collect(Collectors.toList());
+        Map<Long, Long> unreadMap = getUnreadCountBatch(conversationIds, userId);
+        return unreadMap.values().stream().mapToLong(Long::longValue).sum();
     }
 
     // ========== 私有方法 ==========
@@ -258,12 +259,38 @@ public class ChatServiceImpl implements ChatService {
     }
 
     /**
-     * 填充未读消息数
+     * 填充未读消息数（单条，用于详情接口）
      */
     private void fillUnreadCount(Conversation conversation, Long userId) {
         Optional<MessageRead> readOpt = messageReadMapper.findByConversationAndUser(conversation.getId(), userId);
         long lastReadMessageId = readOpt.map(MessageRead::getLastReadMessageId).orElse(0L);
         long unreadCount = messageMapper.countUnread(conversation.getId(), userId, lastReadMessageId);
         conversation.setUnreadCount((int) unreadCount);
+    }
+
+    /**
+     * 批量填充未读消息数
+     */
+    private void fillUnreadCounts(List<Conversation> conversations, Long userId) {
+        List<Long> conversationIds = conversations.stream()
+                .map(Conversation::getId).collect(Collectors.toList());
+        Map<Long, Long> unreadMap = getUnreadCountBatch(conversationIds, userId);
+        for (Conversation conv : conversations) {
+            conv.setUnreadCount(unreadMap.getOrDefault(conv.getId(), 0L).intValue());
+        }
+    }
+
+    /**
+     * 批量查询多个会话的未读消息数，一次SQL完成
+     */
+    private Map<Long, Long> getUnreadCountBatch(List<Long> conversationIds, Long userId) {
+        List<Map<String, Object>> rows = messageReadMapper.countUnreadBatch(conversationIds, userId);
+        Map<Long, Long> result = new HashMap<>();
+        for (Map<String, Object> row : rows) {
+            Long convId = ((Number) row.get("conversation_id")).longValue();
+            Long count = ((Number) row.get("unread_count")).longValue();
+            result.put(convId, count);
+        }
+        return result;
     }
 }

@@ -15,8 +15,8 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-import java.util.List;
-import java.util.Optional;
+import java.util.*;
+import java.util.stream.Collectors;
 
 /**
  * 评论服务实现类
@@ -93,10 +93,15 @@ public class CommentServiceImpl implements CommentService {
         // 查询顶级评论
         List<Comment> comments = commentMapper.findTopLevelByPostId(postId, currentUserId);
 
-        // 为每个顶级评论加载前3条二级回复
-        for (Comment comment : comments) {
-            List<Comment> replies = commentMapper.findTop3RepliesByRootId(comment.getId(), currentUserId);
-            comment.setReplies(replies);
+        // 批量加载所有顶级评论的前3条二级回复
+        if (!comments.isEmpty()) {
+            List<Long> rootIds = comments.stream().map(Comment::getId).collect(Collectors.toList());
+            Map<Long, List<Comment>> repliesMap = commentMapper.findTop3RepliesByRootIds(rootIds, currentUserId)
+                    .stream()
+                    .collect(Collectors.groupingBy(Comment::getRootId));
+            for (Comment comment : comments) {
+                comment.setReplies(repliesMap.getOrDefault(comment.getId(), Collections.emptyList()));
+            }
         }
 
         return comments;

@@ -39,6 +39,11 @@ public interface CommentMapper {
     List<Comment> findTop3RepliesByRootId(@Param("rootId") Long rootId, @Param("currentUserId") Long currentUserId);
 
     /**
+     * 批量查询多个一级评论下的前3条二级回复
+     */
+    List<Comment> findTop3RepliesByRootIds(@Param("rootIds") List<Long> rootIds, @Param("currentUserId") Long currentUserId);
+
+    /**
      * 查询某一级评论下的所有二级评论（分页，用于查看更多回复）
      */
     List<Comment> findRepliesByRootId(@Param("rootId") Long rootId, @Param("currentUserId") Long currentUserId);

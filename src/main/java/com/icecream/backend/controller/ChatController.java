@@ -1,5 +1,6 @@
 package com.icecream.backend.controller;
 
+import com.github.pagehelper.Page;
 import com.icecream.backend.dto.ApiResponse;
 import com.icecream.backend.dto.PagedResult;
 import com.icecream.backend.dto.request.ConversationCreateRequest;
@@ -42,12 +43,17 @@ public class ChatController {
     }
 
     @GetMapping("/conversations")
-    @Operation(summary = "获取会话列表", description = "获取当前用户的所有会话")
-    public ResponseEntity<ApiResponse<List<Conversation>>> getConversations() {
+    @Operation(summary = "获取会话列表", description = "获取当前用户的所有会话，支持分页")
+    public ResponseEntity<ApiResponse<PagedResult<Conversation>>> getConversations(
+            @Parameter(description = "页码，从0开始") @RequestParam(required = false, defaultValue = "0") Integer page,
+            @Parameter(description = "每页大小") @RequestParam(required = false, defaultValue = "20") Integer size) {
         Long currentUserId = SecurityUtil.getCurrentUserId();
-        log.debug("获取会话列表: userId={}", currentUserId);
+        log.debug("获取会话列表: userId={}, page={}, size={}", currentUserId, page, size);
+        com.github.pagehelper.PageHelper.startPage(page + 1, size);
         List<Conversation> conversations = chatService.getConversations(currentUserId);
-        return ResponseEntity.ok(ApiResponse.success("获取成功", conversations));
+        long total = ((Page) conversations).getTotal();
+        PagedResult<Conversation> pagedResult = PagedResult.of(conversations, total, page, size);
+        return ResponseEntity.ok(ApiResponse.success("获取成功", pagedResult));
     }
 
     @GetMapping("/conversations/{conversationId}")

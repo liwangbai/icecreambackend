@@ -8,6 +8,9 @@ import com.icecream.backend.service.FileUploadService;
 import com.icecream.backend.service.UserService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.cache.annotation.CacheEvict;
+import org.springframework.cache.annotation.Cacheable;
+import org.springframework.cache.annotation.Caching;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.multipart.MultipartFile;
@@ -39,6 +42,7 @@ public class UserServiceImpl implements UserService {
     }
 
     @Override
+    @Cacheable(value = "users", key = "#userId")
     public User getUserById(Long userId) {
         log.debug("获取用户公开信息: userId={}", userId);
         Optional<User> userOpt = userMapper.findById(userId);
@@ -54,6 +58,7 @@ public class UserServiceImpl implements UserService {
 
     @Override
     @Transactional
+    @CacheEvict(value = "users", key = "#userId")
     public User updateUser(Long userId, UserUpdateRequest request) {
         log.info("更新用户信息: userId={}", userId);
 
@@ -94,6 +99,10 @@ public class UserServiceImpl implements UserService {
 
     @Override
     @Transactional
+    @Caching(evict = {
+        @CacheEvict(value = "users", key = "#followerId"),
+        @CacheEvict(value = "users", key = "#followingId")
+    })
     public void followUser(Long followerId, Long followingId) {
         log.info("关注用户: followerId={}, followingId={}", followerId, followingId);
 
@@ -126,6 +135,10 @@ public class UserServiceImpl implements UserService {
 
     @Override
     @Transactional
+    @Caching(evict = {
+        @CacheEvict(value = "users", key = "#followerId"),
+        @CacheEvict(value = "users", key = "#followingId")
+    })
     public void unfollowUser(Long followerId, Long followingId) {
         log.info("取消关注: followerId={}, followingId={}", followerId, followingId);
 
@@ -186,6 +199,7 @@ public class UserServiceImpl implements UserService {
 
     @Override
     @Transactional
+    @CacheEvict(value = "users", key = "#userId")
     public String updateAvatar(Long userId, MultipartFile file) {
         log.info("更新用户头像: userId={}", userId);
 

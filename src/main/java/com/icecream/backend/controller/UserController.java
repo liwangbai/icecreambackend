@@ -1,6 +1,8 @@
 package com.icecream.backend.controller;
 
+import com.github.pagehelper.Page;
 import com.icecream.backend.dto.ApiResponse;
+import com.icecream.backend.dto.PagedResult;
 import com.icecream.backend.dto.request.UserUpdateRequest;
 import com.icecream.backend.model.User;
 import com.icecream.backend.service.UserService;
@@ -77,19 +79,31 @@ public class UserController {
     }
 
     @GetMapping("/{userId}/followers")
-    @Operation(summary = "获取粉丝列表", description = "获取指定用户的粉丝列表")
-    public ResponseEntity<ApiResponse<List<User>>> getFollowers(@PathVariable Long userId) {
-        log.info("获取粉丝列表: userId={}", userId);
+    @Operation(summary = "获取粉丝列表", description = "获取指定用户的粉丝列表，支持分页")
+    public ResponseEntity<ApiResponse<PagedResult<User>>> getFollowers(
+            @PathVariable Long userId,
+            @Parameter(description = "页码，从0开始") @RequestParam(required = false, defaultValue = "0") Integer page,
+            @Parameter(description = "每页大小") @RequestParam(required = false, defaultValue = "20") Integer size) {
+        log.info("获取粉丝列表: userId={}, page={}, size={}", userId, page, size);
+        com.github.pagehelper.PageHelper.startPage(page + 1, size);
         List<User> followers = userService.getFollowers(userId);
-        return ResponseEntity.ok(ApiResponse.success("获取成功", followers));
+        long total = ((Page) followers).getTotal();
+        PagedResult<User> pagedResult = PagedResult.of(followers, total, page, size);
+        return ResponseEntity.ok(ApiResponse.success("获取成功", pagedResult));
     }
 
     @GetMapping("/{userId}/following")
-    @Operation(summary = "获取关注列表", description = "获取指定用户的关注列表")
-    public ResponseEntity<ApiResponse<List<User>>> getFollowing(@PathVariable Long userId) {
-        log.info("获取关注列表: userId={}", userId);
+    @Operation(summary = "获取关注列表", description = "获取指定用户的关注列表，支持分页")
+    public ResponseEntity<ApiResponse<PagedResult<User>>> getFollowing(
+            @PathVariable Long userId,
+            @Parameter(description = "页码，从0开始") @RequestParam(required = false, defaultValue = "0") Integer page,
+            @Parameter(description = "每页大小") @RequestParam(required = false, defaultValue = "20") Integer size) {
+        log.info("获取关注列表: userId={}, page={}, size={}", userId, page, size);
+        com.github.pagehelper.PageHelper.startPage(page + 1, size);
         List<User> following = userService.getFollowing(userId);
-        return ResponseEntity.ok(ApiResponse.success("获取成功", following));
+        long total = ((Page) following).getTotal();
+        PagedResult<User> pagedResult = PagedResult.of(following, total, page, size);
+        return ResponseEntity.ok(ApiResponse.success("获取成功", pagedResult));
     }
 
     @GetMapping("/{userId}/is-following")

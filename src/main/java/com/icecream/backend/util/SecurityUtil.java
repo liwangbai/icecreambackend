@@ -12,6 +12,7 @@ import org.springframework.stereotype.Component;
 
 import jakarta.annotation.PostConstruct;
 import java.util.Optional;
+import java.util.concurrent.ConcurrentHashMap;
 
 /**
  * 安全工具类
@@ -23,6 +24,7 @@ import java.util.Optional;
 public class SecurityUtil {
 
     private static UserMapper staticUserMapper;
+    private static final ConcurrentHashMap<String, Long> USERNAME_TO_ID_CACHE = new ConcurrentHashMap<>();
     private final UserMapper userMapper;
 
     @PostConstruct
@@ -82,6 +84,11 @@ public class SecurityUtil {
     public static Long getCurrentUserId() {
         String username = getCurrentUsername();
 
+        Long cachedId = USERNAME_TO_ID_CACHE.get(username);
+        if (cachedId != null) {
+            return cachedId;
+        }
+
         // 从数据库查询用户ID
         Optional<User> userOpt = staticUserMapper.findByUsername(username);
         if (!userOpt.isPresent()) {
@@ -90,6 +97,7 @@ public class SecurityUtil {
         }
 
         Long userId = userOpt.get().getId();
+        USERNAME_TO_ID_CACHE.put(username, userId);
         log.debug("获取当前用户ID: username={}, userId={}", username, userId);
         return userId;
     }

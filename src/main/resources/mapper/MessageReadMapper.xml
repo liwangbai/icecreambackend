@@ -36,4 +36,22 @@
             last_read_at = NOW()
     </update>
 
+    <!-- 批量查询多个会话的未读消息数 -->
+    <select id="countUnreadBatch" resultType="java.util.HashMap">
+        SELECT
+            c.id as conversation_id,
+            COUNT(m.id) as unread_count
+        FROM conversations c
+        LEFT JOIN message_reads mr ON mr.conversation_id = c.id AND mr.user_id = #{userId}
+        LEFT JOIN messages m ON m.conversation_id = c.id
+            AND m.sender_id != #{userId}
+            AND m.status = 1
+            AND m.id > COALESCE(mr.last_read_message_id, 0)
+        WHERE c.id IN
+        <foreach collection="conversationIds" item="convId" open="(" separator="," close=")">
+            #{convId}
+        </foreach>
+        GROUP BY c.id
+    </select>
+
 </mapper>
