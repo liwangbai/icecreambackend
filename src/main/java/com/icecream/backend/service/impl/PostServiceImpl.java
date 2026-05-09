@@ -220,7 +220,7 @@ public class PostServiceImpl implements PostService {
         log.debug("查询帖子列表: {}", query);
 
         // 设置分页
-        PageHelper.startPage(query.getPage(), query.getSize());
+        PageHelper.startPage(query.getPage() + 1, query.getSize());
 
         // 执行查询
         List<Post> posts = postMapper.findByCondition(query);

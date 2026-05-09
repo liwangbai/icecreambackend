@@ -92,7 +92,7 @@ public class CommentServiceImpl implements CommentService {
         log.debug("获取帖子评论列表: postId={}, page={}, size={}", postId, page, size);
 
         // 设置分页
-        PageHelper.startPage(page, size);
+        PageHelper.startPage(page + 1, size);
 
         // 查询顶级评论
         List<Comment> comments = commentMapper.findTopLevelByPostId(postId, currentUserId);
@@ -253,7 +253,7 @@ public class CommentServiceImpl implements CommentService {
         log.debug("获取一级评论下的二级回复列表: rootId={}, page={}, size={}", rootId, page, size);
 
         // 设置分页
-        PageHelper.startPage(page, size);
+        PageHelper.startPage(page + 1, size);
 
         return commentMapper.findRepliesByRootId(rootId, currentUserId);
     }

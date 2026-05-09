@@ -84,7 +84,7 @@ mybatis:
 # PageHelper测试配置
 pagehelper:
   helper-dialect: h2
-  reasonable: true
+  reasonable: false
   support-methods-arguments: true
   params: count=countSql
   page-size-zero: true

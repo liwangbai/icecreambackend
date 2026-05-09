@@ -120,7 +120,7 @@ public class ChatServiceImpl implements ChatService {
         // 验证会话权限
         getConversationById(conversationId, userId);
 
-        PageHelper.startPage(page, size);
+        PageHelper.startPage(page + 1, size);
         return messageMapper.findByConversationId(conversationId);
     }
 
