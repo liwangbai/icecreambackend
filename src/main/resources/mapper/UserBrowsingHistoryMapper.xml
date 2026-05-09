@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.icecream.backend.mapper.UserBrowsingHistoryMapper">
+
+    <!-- 插入浏览记录，若已存在则更新浏览时间 -->
+    <insert id="insertOrUpdate">
+        INSERT INTO user_browsing_history (user_id, post_id, created_at)
+        VALUES (#{userId}, #{postId}, NOW())
+        ON DUPLICATE KEY UPDATE created_at = NOW()
+    </insert>
+
+</mapper>

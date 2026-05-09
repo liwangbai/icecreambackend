@@ -18,6 +18,9 @@
         <result property="postCount" column="post_count"/>
         <result property="followerCount" column="follower_count"/>
         <result property="followingCount" column="following_count"/>
+        <result property="likeCount" column="like_count"/>
+        <result property="collectionCount" column="collection_count"/>
+        <result property="historyCount" column="history_count"/>
         <result property="createdAt" column="created_at"/>
         <result property="updatedAt" column="updated_at"/>
     </resultMap>
@@ -52,10 +55,12 @@
     <insert id="insert" parameterType="com.icecream.backend.model.User" useGeneratedKeys="true" keyProperty="id">
         INSERT INTO users (
             username, email, password_hash, nickname, avatar_url, bio,
-            gender, status, role, last_login_at, post_count, follower_count, following_count
+            gender, status, role, last_login_at, post_count, follower_count, following_count,
+            like_count, collection_count, history_count
         ) VALUES (
             #{username}, #{email}, #{passwordHash}, #{nickname}, #{avatarUrl}, #{bio},
-            #{gender}, #{status}, #{role}, #{lastLoginAt}, #{postCount}, #{followerCount}, #{followingCount}
+            #{gender}, #{status}, #{role}, #{lastLoginAt}, #{postCount}, #{followerCount}, #{followingCount},
+            #{likeCount}, #{collectionCount}, #{historyCount}
         )
     </insert>
 
@@ -133,6 +138,54 @@
     <update id="decrementPostCount">
         UPDATE users
         SET post_count = GREATEST(post_count - 1, 0),
+            updated_at = NOW()
+        WHERE id = #{userId}
+    </update>
+
+    <!-- 增加用户的获赞数 -->
+    <update id="incrementLikeCount">
+        UPDATE users
+        SET like_count = like_count + 1,
+            updated_at = NOW()
+        WHERE id = #{userId}
+    </update>
+
+    <!-- 减少用户的获赞数 -->
+    <update id="decrementLikeCount">
+        UPDATE users
+        SET like_count = GREATEST(like_count - 1, 0),
+            updated_at = NOW()
+        WHERE id = #{userId}
+    </update>
+
+    <!-- 增加用户的收藏数 -->
+    <update id="incrementCollectionCount">
+        UPDATE users
+        SET collection_count = collection_count + 1,
+            updated_at = NOW()
+        WHERE id = #{userId}
+    </update>
+
+    <!-- 减少用户的收藏数 -->
+    <update id="decrementCollectionCount">
+        UPDATE users
+        SET collection_count = GREATEST(collection_count - 1, 0),
+            updated_at = NOW()
+        WHERE id = #{userId}
+    </update>
+
+    <!-- 增加用户的浏览历史条数 -->
+    <update id="incrementHistoryCount">
+        UPDATE users
+        SET history_count = history_count + 1,
+            updated_at = NOW()
+        WHERE id = #{userId}
+    </update>
+
+    <!-- 减少用户的浏览历史条数 -->
+    <update id="decrementHistoryCount">
+        UPDATE users
+        SET history_count = GREATEST(history_count - 1, 0),
             updated_at = NOW()
         WHERE id = #{userId}
     </update>

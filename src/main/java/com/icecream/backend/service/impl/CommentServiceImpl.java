@@ -7,11 +7,13 @@ import com.icecream.backend.exception.ForbiddenException;
 import com.icecream.backend.exception.ResourceNotFoundException;
 import com.icecream.backend.mapper.CommentMapper;
 import com.icecream.backend.mapper.PostMapper;
+import com.icecream.backend.mapper.UserMapper;
 import com.icecream.backend.model.Comment;
 import com.icecream.backend.model.Post;
 import com.icecream.backend.service.CommentService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.cache.CacheManager;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -28,6 +30,8 @@ public class CommentServiceImpl implements CommentService {
 
     private final CommentMapper commentMapper;
     private final PostMapper postMapper;
+    private final UserMapper userMapper;
+    private final CacheManager cacheManager;
 
     @Override
     @Transactional
@@ -204,6 +208,11 @@ public class CommentServiceImpl implements CommentService {
 
         // 增加评论点赞数
         commentMapper.incrementLikeCount(commentId);
+
+        // 增加评论作者的获赞数
+        Comment comment = commentOpt.get();
+        userMapper.incrementLikeCount(comment.getUserId());
+        cacheManager.getCache("users").evict(comment.getUserId());
     }
 
     @Override
@@ -227,6 +236,11 @@ public class CommentServiceImpl implements CommentService {
 
         // 减少评论点赞数
         commentMapper.decrementLikeCount(commentId);
+
+        // 减少评论作者的获赞数
+        Comment comment = commentOpt.get();
+        userMapper.decrementLikeCount(comment.getUserId());
+        cacheManager.getCache("users").evict(comment.getUserId());
     }
 
     @Override

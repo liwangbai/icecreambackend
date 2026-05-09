@@ -74,4 +74,19 @@ public class User extends BaseEntity {
      * 关注数
      */
     private Integer followingCount;
+
+    /**
+     * 获赞数（收到的帖子点赞数 + 收到的评论点赞数）
+     */
+    private Integer likeCount;
+
+    /**
+     * 收藏的帖子数
+     */
+    private Integer collectionCount;
+
+    /**
+     * 浏览历史条数
+     */
+    private Integer historyCount;
 }

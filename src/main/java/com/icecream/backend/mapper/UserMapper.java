@@ -109,6 +109,48 @@ public interface UserMapper {
     int decrementPostCount(@Param("userId") Long userId);
 
     /**
+     * 增加用户的获赞数
+     * @param userId 用户ID
+     * @return 影响的行数
+     */
+    int incrementLikeCount(@Param("userId") Long userId);
+
+    /**
+     * 减少用户的获赞数
+     * @param userId 用户ID
+     * @return 影响的行数
+     */
+    int decrementLikeCount(@Param("userId") Long userId);
+
+    /**
+     * 增加用户的收藏数
+     * @param userId 用户ID
+     * @return 影响的行数
+     */
+    int incrementCollectionCount(@Param("userId") Long userId);
+
+    /**
+     * 减少用户的收藏数
+     * @param userId 用户ID
+     * @return 影响的行数
+     */
+    int decrementCollectionCount(@Param("userId") Long userId);
+
+    /**
+     * 增加用户的浏览历史条数
+     * @param userId 用户ID
+     * @return 影响的行数
+     */
+    int incrementHistoryCount(@Param("userId") Long userId);
+
+    /**
+     * 减少用户的浏览历史条数
+     * @param userId 用户ID
+     * @return 影响的行数
+     */
+    int decrementHistoryCount(@Param("userId") Long userId);
+
+    /**
      * 更新用户最后登录时间
      * @param userId 用户ID
      * @return 影响的行数

@@ -21,6 +21,9 @@ CREATE TABLE IF NOT EXISTS users (
     post_count INT DEFAULT 0 COMMENT '发帖数',
     follower_count INT DEFAULT 0 COMMENT '粉丝数',
     following_count INT DEFAULT 0 COMMENT '关注数',
+    like_count INT DEFAULT 0 COMMENT '获赞数（帖子点赞数+评论点赞数）',
+    collection_count INT DEFAULT 0 COMMENT '收藏的帖子数',
+    history_count INT DEFAULT 0 COMMENT '浏览历史条数',
     created_at DATETIME DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
     updated_at DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT '更新时间',
     INDEX idx_username (username),
@@ -113,6 +116,19 @@ CREATE TABLE IF NOT EXISTS post_favorites (
     INDEX idx_user_id (user_id),
     INDEX idx_post_id (post_id)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='帖子收藏表';
+
+-- ========== 用户浏览历史表 ==========
+CREATE TABLE IF NOT EXISTS user_browsing_history (
+    id BIGINT PRIMARY KEY AUTO_INCREMENT,
+    user_id BIGINT NOT NULL COMMENT '用户ID',
+    post_id BIGINT NOT NULL COMMENT '帖子ID',
+    created_at DATETIME DEFAULT CURRENT_TIMESTAMP COMMENT '浏览时间',
+    UNIQUE KEY uk_user_post_history (user_id, post_id),
+    FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
+    FOREIGN KEY (post_id) REFERENCES posts(id) ON DELETE CASCADE,
+    INDEX idx_user_id (user_id),
+    INDEX idx_created_at (created_at DESC)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='用户浏览历史表';
 
 -- ========== 帖子点赞表 ==========
 CREATE TABLE IF NOT EXISTS post_likes (

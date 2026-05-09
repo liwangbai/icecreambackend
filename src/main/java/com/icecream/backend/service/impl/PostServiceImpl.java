@@ -5,6 +5,7 @@ import com.icecream.backend.dto.request.PostCreateRequest;
 import com.icecream.backend.dto.request.PostQueryRequest;
 import com.icecream.backend.dto.request.PostUpdateRequest;
 import com.icecream.backend.mapper.PostMapper;
+import com.icecream.backend.mapper.UserBrowsingHistoryMapper;
 import com.icecream.backend.mapper.UserMapper;
 import com.icecream.backend.model.Post;
 import com.icecream.backend.model.User;
@@ -12,6 +13,7 @@ import com.icecream.backend.service.PostService;
 import com.github.pagehelper.PageHelper;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.cache.CacheManager;
 import org.springframework.cache.annotation.CacheEvict;
 import org.springframework.cache.annotation.Cacheable;
 import org.springframework.stereotype.Service;
@@ -35,7 +37,9 @@ public class PostServiceImpl implements PostService {
 
     private final PostMapper postMapper;
     private final UserMapper userMapper;
+    private final UserBrowsingHistoryMapper userBrowsingHistoryMapper;
     private final ObjectMapper objectMapper;
+    private final CacheManager cacheManager;
 
     @Override
     @Transactional
@@ -107,6 +111,15 @@ public class PostServiceImpl implements PostService {
 
         // 增加浏览数
         postMapper.incrementViewCount(postId);
+
+        // 记录用户浏览历史（已登录用户），仅首次浏览时增加历史条数
+        if (currentUserId != null) {
+            int result = userBrowsingHistoryMapper.insertOrUpdate(currentUserId, postId);
+            if (result == 1) {
+                userMapper.incrementHistoryCount(currentUserId);
+                cacheManager.getCache("users").evict(currentUserId);
+            }
+        }
 
         // 设置关联信息
         enrichPostWithAssociations(post, currentUserId);
@@ -235,11 +248,19 @@ public class PostServiceImpl implements PostService {
             throw new RuntimeException("已经点赞过此帖子");
         }
 
+        // 获取帖子作者
+        Post post = postMapper.findById(postId)
+                .orElseThrow(() -> new ResourceNotFoundException("帖子不存在"));
+
         // 添加点赞记录
         postMapper.insertLike(userId, postId);
 
         // 增加帖子点赞数
         postMapper.incrementLikeCount(postId);
+
+        // 增加帖子作者的获赞数
+        userMapper.incrementLikeCount(post.getUserId());
+        cacheManager.getCache("users").evict(post.getUserId());
     }
 
     @Override
@@ -252,11 +273,19 @@ public class PostServiceImpl implements PostService {
             throw new RuntimeException("尚未点赞此帖子");
         }
 
+        // 获取帖子作者
+        Post post = postMapper.findById(postId)
+                .orElseThrow(() -> new ResourceNotFoundException("帖子不存在"));
+
         // 删除点赞记录
         postMapper.deleteLike(userId, postId);
 
         // 减少帖子点赞数
         postMapper.decrementLikeCount(postId);
+
+        // 减少帖子作者的获赞数
+        userMapper.decrementLikeCount(post.getUserId());
+        cacheManager.getCache("users").evict(post.getUserId());
     }
 
     @Override
@@ -279,6 +308,10 @@ public class PostServiceImpl implements PostService {
 
         // 增加帖子收藏数
         postMapper.incrementFavoriteCount(postId);
+
+        // 增加用户的收藏数
+        userMapper.incrementCollectionCount(userId);
+        cacheManager.getCache("users").evict(userId);
     }
 
     @Override
@@ -296,6 +329,10 @@ public class PostServiceImpl implements PostService {
 
         // 减少帖子收藏数
         postMapper.decrementFavoriteCount(postId);
+
+        // 减少用户的收藏数
+        userMapper.decrementCollectionCount(userId);
+        cacheManager.getCache("users").evict(userId);
     }
 
     @Override
