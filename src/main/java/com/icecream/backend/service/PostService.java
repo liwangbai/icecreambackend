@@ -3,6 +3,7 @@ package com.icecream.backend.service;
 import com.icecream.backend.dto.HotTagDTO;
 import com.icecream.backend.dto.request.PostCreateRequest;
 import com.icecream.backend.dto.request.PostQueryRequest;
+import com.icecream.backend.dto.request.PostSearchRequest;
 import com.icecream.backend.dto.request.PostUpdateRequest;
 import com.icecream.backend.model.Post;
 
@@ -166,4 +167,18 @@ public interface PostService {
      * @return 帖子数量
      */
     long countPostsByTagName(String tagName);
+
+    /**
+     * 根据关键词搜索帖子（全文搜索）
+     * @param query 搜索条件（keyword + 可选筛选）
+     * @return 帖子列表
+     */
+    List<Post> searchPosts(PostSearchRequest query);
+
+    /**
+     * 统计关键词搜索结果数量
+     * @param query 搜索条件
+     * @return 结果数量
+     */
+    long countSearchResults(PostSearchRequest query);
 }

@@ -639,4 +639,116 @@
         ) AS interactions
     </select>
 
+    <!-- ========== 全文搜索 ========== -->
+
+    <!-- 根据关键词搜索帖子（单字走LIKE模糊匹配，多字走FULLTEXT全文搜索） -->
+    <select id="searchByKeyword" parameterType="com.icecream.backend.dto.request.PostSearchRequest" resultMap="postListResultMap">
+        SELECT
+            p.id, p.user_id, p.title, p.content, p.summary, p.cover_image_url,
+            p.view_count, p.like_count, p.favorite_count, p.comment_count, p.status, p.visibility,
+            p.is_top, p.published_at, p.created_at, p.updated_at,
+            p.faction, p.region, p.server, p.body_type, p.gameplay,
+            p.target, p.contact_detail, p.image_urls, p.tags,
+            u.id as author_id,
+            u.username as author_username,
+            u.nickname as author_nickname,
+            u.avatar_url as author_avatar_url,
+            <if test="query.currentUserId != null">
+                CASE WHEN EXISTS (
+                    SELECT 1 FROM post_likes pl
+                    WHERE pl.post_id = p.id AND pl.user_id = #{query.currentUserId}
+                ) THEN TRUE ELSE FALSE END as liked,
+                CASE WHEN EXISTS (
+                    SELECT 1 FROM post_favorites pf
+                    WHERE pf.post_id = p.id AND pf.user_id = #{query.currentUserId}
+                ) THEN TRUE ELSE FALSE END as favorited,
+                CASE WHEN EXISTS (
+                    SELECT 1 FROM user_follows uf
+                    WHERE uf.follower_id = #{query.currentUserId} AND uf.following_id = p.user_id
+                ) THEN TRUE ELSE FALSE END as followed,
+                CASE WHEN EXISTS (
+                    SELECT 1 FROM user_follows uf
+                    WHERE uf.follower_id = p.user_id AND uf.following_id = #{query.currentUserId}
+                ) THEN TRUE ELSE FALSE END as follow_me
+            </if>
+            <if test="query.currentUserId == null">
+                FALSE as liked,
+                FALSE as favorited,
+                FALSE as followed,
+                FALSE as follow_me
+            </if>,
+            <choose>
+                <when test="query.keyword.length() == 1">0</when>
+                <otherwise>MATCH(p.title, p.content) AGAINST(#{query.keyword} IN BOOLEAN MODE)</otherwise>
+            </choose> AS relevance
+        FROM posts p
+        INNER JOIN users u ON p.user_id = u.id
+        WHERE
+        <choose>
+            <when test="query.keyword.length() == 1">
+                (p.title LIKE CONCAT('%', #{query.keyword}, '%') OR p.content LIKE CONCAT('%', #{query.keyword}, '%'))
+            </when>
+            <otherwise>
+                MATCH(p.title, p.content) AGAINST(#{query.keyword} IN BOOLEAN MODE)
+            </otherwise>
+        </choose>
+          AND p.status = 1
+          AND p.visibility = 1
+        <if test="query.faction != null and query.faction != ''">
+            AND p.faction = #{query.faction}
+        </if>
+        <if test="query.region != null and query.region != ''">
+            AND p.region = #{query.region}
+        </if>
+        <if test="query.server != null and query.server != ''">
+            AND p.server = #{query.server}
+        </if>
+        <if test="query.bodyType != null and query.bodyType != ''">
+            AND p.body_type = #{query.bodyType}
+        </if>
+        <if test="query.gameplay != null and query.gameplay != ''">
+            AND p.gameplay = #{query.gameplay}
+        </if>
+        <choose>
+            <when test="query.keyword.length() == 1">
+                ORDER BY p.published_at DESC
+            </when>
+            <otherwise>
+                ORDER BY relevance DESC, p.published_at DESC
+            </otherwise>
+        </choose>
+    </select>
+
+    <!-- 统计关键词搜索结果总数 -->
+    <select id="countByKeyword" parameterType="com.icecream.backend.dto.request.PostSearchRequest" resultType="long">
+        SELECT COUNT(*)
+        FROM posts p
+        WHERE
+        <choose>
+            <when test="query.keyword.length() == 1">
+                (p.title LIKE CONCAT('%', #{query.keyword}, '%') OR p.content LIKE CONCAT('%', #{query.keyword}, '%'))
+            </when>
+            <otherwise>
+                MATCH(p.title, p.content) AGAINST(#{query.keyword} IN BOOLEAN MODE)
+            </otherwise>
+        </choose>
+          AND p.status = 1
+          AND p.visibility = 1
+        <if test="query.faction != null and query.faction != ''">
+            AND p.faction = #{query.faction}
+        </if>
+        <if test="query.region != null and query.region != ''">
+            AND p.region = #{query.region}
+        </if>
+        <if test="query.server != null and query.server != ''">
+            AND p.server = #{query.server}
+        </if>
+        <if test="query.bodyType != null and query.bodyType != ''">
+            AND p.body_type = #{query.bodyType}
+        </if>
+        <if test="query.gameplay != null and query.gameplay != ''">
+            AND p.gameplay = #{query.gameplay}
+        </if>
+    </select>
+
 </mapper>

@@ -5,6 +5,7 @@ import com.icecream.backend.dto.HotTagDTO;
 import com.icecream.backend.dto.PagedResult;
 import com.icecream.backend.dto.request.PostCreateRequest;
 import com.icecream.backend.dto.request.PostQueryRequest;
+import com.icecream.backend.dto.request.PostSearchRequest;
 import com.icecream.backend.dto.request.PostUpdateRequest;
 import com.icecream.backend.model.Post;
 import com.icecream.backend.service.PostService;
@@ -113,6 +114,48 @@ public class PostController {
         PagedResult<Post> pagedResult = PagedResult.of(posts, total, page, size);
         ApiResponse<PagedResult<Post>> response = ApiResponse.success("查询成功", pagedResult);
         return ResponseEntity.ok(response);
+    }
+
+    @GetMapping("/search")
+    @Operation(summary = "关键词搜索帖子", description = "根据关键词全文搜索帖子标题和内容，支持分页和可选筛选条件（门派、大区、服务器、体型、玩法），结果按相关性+发布时间排序")
+    public ResponseEntity<ApiResponse<PagedResult<Post>>> searchPosts(
+            @Parameter(description = "搜索关键词（1-100字符）") @RequestParam String keyword,
+            @Parameter(description = "页码，从0开始") @RequestParam(required = false, defaultValue = "0") Integer page,
+            @Parameter(description = "每页大小") @RequestParam(required = false, defaultValue = "10") Integer size,
+            @Parameter(description = "门派筛选") @RequestParam(required = false) String faction,
+            @Parameter(description = "大区筛选") @RequestParam(required = false) String region,
+            @Parameter(description = "服务器筛选") @RequestParam(required = false) String server,
+            @Parameter(description = "体型筛选") @RequestParam(required = false) String bodyType,
+            @Parameter(description = "玩法筛选") @RequestParam(required = false) String gameplay) {
+
+        if (keyword == null || keyword.trim().isEmpty()) {
+            return ResponseEntity.badRequest()
+                .body(ApiResponse.error("搜索关键词不能为空"));
+        }
+        if (keyword.trim().length() > 100) {
+            return ResponseEntity.badRequest()
+                .body(ApiResponse.error("搜索关键词长度不能超过100个字符"));
+        }
+
+        Long currentUserId = SecurityUtil.getCurrentUserIdOrNull();
+
+        PostSearchRequest query = new PostSearchRequest();
+        query.setKeyword(keyword.trim());
+        query.setPage(page);
+        query.setSize(size);
+        query.setFaction(faction);
+        query.setRegion(region);
+        query.setServer(server);
+        query.setBodyType(bodyType);
+        query.setGameplay(gameplay);
+        query.setCurrentUserId(currentUserId);
+
+        log.debug("关键词搜索帖子: {}", query);
+        List<Post> posts = postService.searchPosts(query);
+        long total = postService.countSearchResults(query);
+
+        PagedResult<Post> pagedResult = PagedResult.of(posts, total, page, size);
+        return ResponseEntity.ok(ApiResponse.success("搜索成功", pagedResult));
     }
 
     @PostMapping("/{postId}/like")

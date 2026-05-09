@@ -1,6 +1,7 @@
 package com.icecream.backend.mapper;
 
 import com.icecream.backend.dto.request.PostQueryRequest;
+import com.icecream.backend.dto.request.PostSearchRequest;
 import com.icecream.backend.model.Post;
 import org.apache.ibatis.annotations.Mapper;
 import org.apache.ibatis.annotations.Param;
@@ -243,4 +244,20 @@ public interface PostMapper {
      * @return 互动数量
      */
     long countInteractionsOnMyContent(@Param("userId") Long userId);
+
+    // ========== 搜索相关 ==========
+
+    /**
+     * 根据关键词全文搜索帖子（MATCH...AGAINST）
+     * @param query 搜索条件（keyword + 可选筛选 + 分页）
+     * @return 帖子列表（按相关性+发布时间排序）
+     */
+    List<Post> searchByKeyword(@Param("query") PostSearchRequest query);
+
+    /**
+     * 统计关键词搜索结果总数
+     * @param query 搜索条件
+     * @return 结果总数
+     */
+    long countByKeyword(@Param("query") PostSearchRequest query);
 }

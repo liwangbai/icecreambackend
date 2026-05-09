@@ -57,6 +57,7 @@ CREATE TABLE IF NOT EXISTS posts (
     INDEX idx_is_top_published_at (is_top, published_at DESC),
     INDEX idx_view_count (view_count DESC),
     INDEX idx_like_count (like_count DESC)
+    FULLTEXT INDEX ft_title_content (title, content) WITH PARSER ngram
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='帖子表';
 
 -- ========== 标签表（预定义标签） ==========

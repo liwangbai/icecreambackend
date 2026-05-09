@@ -3,6 +3,7 @@ package com.icecream.backend.service.impl;
 import com.icecream.backend.dto.HotTagDTO;
 import com.icecream.backend.dto.request.PostCreateRequest;
 import com.icecream.backend.dto.request.PostQueryRequest;
+import com.icecream.backend.dto.request.PostSearchRequest;
 import com.icecream.backend.dto.request.PostUpdateRequest;
 import com.icecream.backend.mapper.PostMapper;
 import com.icecream.backend.mapper.UserBrowsingHistoryMapper;
@@ -451,6 +452,25 @@ public class PostServiceImpl implements PostService {
     @Override
     public long countPostsByTagName(String tagName) {
         return postMapper.countByTagName(tagName);
+    }
+
+    @Override
+    public List<Post> searchPosts(PostSearchRequest query) {
+        log.debug("关键词搜索帖子: keyword={}, page={}, size={}", query.getKeyword(), query.getPage(), query.getSize());
+
+        PageHelper.startPage(query.getPage() + 1, query.getSize());
+        List<Post> posts = postMapper.searchByKeyword(query);
+
+        for (Post post : posts) {
+            enrichPostMetadata(post);
+        }
+
+        return posts;
+    }
+
+    @Override
+    public long countSearchResults(PostSearchRequest query) {
+        return postMapper.countByKeyword(query);
     }
 
     // ========== 私有方法 ==========
