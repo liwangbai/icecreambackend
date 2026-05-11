@@ -124,6 +124,26 @@ public interface PostService {
     long countUserFavorites(Long userId);
 
     /**
+     * 获取用户浏览历史帖子列表
+     * @param userId 用户ID
+     * @return 帖子列表（按浏览时间倒序）
+     */
+    List<Post> getBrowsingHistory(Long userId);
+
+    /**
+     * 统计用户浏览历史数量
+     * @param userId 用户ID
+     * @return 浏览历史数量
+     */
+    long countBrowsingHistory(Long userId);
+
+    /**
+     * 清除用户全部浏览历史
+     * @param userId 用户ID
+     */
+    void clearBrowsingHistory(Long userId);
+
+    /**
      * 查询用户发布的帖子
      * @param userId 用户ID
      * @param status 帖子状态（可选，null表示所有状态）

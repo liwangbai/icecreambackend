@@ -151,6 +151,11 @@ public interface UserMapper {
     int decrementHistoryCount(@Param("userId") Long userId);
 
     /**
+     * 重置用户的浏览历史条数为指定值
+     */
+    int resetHistoryCount(@Param("userId") Long userId, @Param("count") int count);
+
+    /**
      * 更新用户最后登录时间
      * @param userId 用户ID
      * @return 影响的行数

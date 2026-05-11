@@ -120,6 +120,8 @@ public class PostServiceImpl implements PostService {
                 userMapper.incrementHistoryCount(currentUserId);
                 cacheManager.getCache("users").evict(currentUserId);
             }
+            // 清理超出上限的旧记录（保留最近200条）
+            userBrowsingHistoryMapper.deleteOldestByUserId(currentUserId, 200);
         }
 
         // 设置关联信息
@@ -357,6 +359,36 @@ public class PostServiceImpl implements PostService {
     @Override
     public long countUserFavorites(Long userId) {
         return postMapper.countUserFavorites(userId);
+    }
+
+    @Override
+    public List<Post> getBrowsingHistory(Long userId) {
+        log.debug("查询用户浏览历史: userId={}", userId);
+
+        List<Post> posts = postMapper.findUserBrowsingHistory(userId);
+
+        for (Post post : posts) {
+            enrichPostMetadata(post);
+        }
+
+        return posts;
+    }
+
+    @Override
+    public long countBrowsingHistory(Long userId) {
+        return postMapper.countUserBrowsingHistory(userId);
+    }
+
+    @Override
+    @Transactional
+    public void clearBrowsingHistory(Long userId) {
+        log.info("清除用户浏览历史: userId={}", userId);
+
+        int deleted = userBrowsingHistoryMapper.deleteAllByUserId(userId);
+        log.info("已删除 {} 条浏览记录", deleted);
+
+        userMapper.resetHistoryCount(userId, 0);
+        cacheManager.getCache("users").evict(userId);
     }
 
     @Override

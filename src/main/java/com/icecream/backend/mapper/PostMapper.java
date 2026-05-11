@@ -232,6 +232,20 @@ public interface PostMapper {
     long countUserFavorites(@Param("userId") Long userId);
 
     /**
+     * 查询用户浏览历史帖子（支持分页，按浏览时间倒序）
+     * @param userId 用户ID
+     * @return 帖子列表
+     */
+    List<Post> findUserBrowsingHistory(@Param("userId") Long userId);
+
+    /**
+     * 统计用户浏览历史数量
+     * @param userId 用户ID
+     * @return 浏览历史数量
+     */
+    long countUserBrowsingHistory(@Param("userId") Long userId);
+
+    /**
      * 查询对当前用户内容的互动列表（赞和收藏，UNION合并按时间倒序）
      * @param userId 当前用户ID
      * @return 互动通知列表

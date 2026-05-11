@@ -229,6 +229,31 @@ public class PostController {
         return ResponseEntity.ok(ApiResponse.success("获取成功", pagedResult));
     }
 
+    @GetMapping("/browsing-history")
+    @Operation(summary = "获取浏览历史", description = "获取当前用户的帖子浏览历史，按浏览时间倒序，支持分页，最多保留200条")
+    public ResponseEntity<ApiResponse<PagedResult<Post>>> getBrowsingHistory(
+            @Parameter(description = "页码，从0开始") @RequestParam(required = false, defaultValue = "0") Integer page,
+            @Parameter(description = "每页大小") @RequestParam(required = false, defaultValue = "20") Integer size) {
+        Long currentUserId = SecurityUtil.getCurrentUserId();
+        log.debug("获取用户浏览历史: userId={}, page={}, size={}", currentUserId, page, size);
+
+        com.github.pagehelper.PageHelper.startPage(page + 1, size);
+        List<Post> posts = postService.getBrowsingHistory(currentUserId);
+        long total = postService.countBrowsingHistory(currentUserId);
+
+        PagedResult<Post> pagedResult = PagedResult.of(posts, total, page, size);
+        return ResponseEntity.ok(ApiResponse.success("获取成功", pagedResult));
+    }
+
+    @DeleteMapping("/browsing-history")
+    @Operation(summary = "清除浏览历史", description = "清除当前用户的全部帖子浏览历史")
+    public ResponseEntity<ApiResponse<Void>> clearBrowsingHistory() {
+        Long currentUserId = SecurityUtil.getCurrentUserId();
+        log.info("清除用户浏览历史: userId={}", currentUserId);
+        postService.clearBrowsingHistory(currentUserId);
+        return ResponseEntity.ok(ApiResponse.success("清除成功"));
+    }
+
     @GetMapping("/user/{userId}")
     @Operation(summary = "获取用户帖子", description = "获取指定用户发布的帖子，支持分页")
     public ResponseEntity<ApiResponse<PagedResult<Post>>> getUserPosts(

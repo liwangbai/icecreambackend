@@ -190,6 +190,14 @@
         WHERE id = #{userId}
     </update>
 
+    <!-- 重置用户的浏览历史条数 -->
+    <update id="resetHistoryCount">
+        UPDATE users
+        SET history_count = #{count},
+            updated_at = NOW()
+        WHERE id = #{userId}
+    </update>
+
     <!-- 更新用户最后登录时间 -->
     <update id="updateLastLogin">
         UPDATE users

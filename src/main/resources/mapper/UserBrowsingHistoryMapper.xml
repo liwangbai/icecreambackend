@@ -9,4 +9,24 @@
         ON DUPLICATE KEY UPDATE created_at = NOW()
     </insert>
 
+    <!-- 清除用户全部浏览历史 -->
+    <delete id="deleteAllByUserId">
+        DELETE FROM user_browsing_history
+        WHERE user_id = #{userId}
+    </delete>
+
+    <!-- 保留最近N条记录，删除更早的浏览历史 -->
+    <delete id="deleteOldestByUserId">
+        DELETE FROM user_browsing_history
+        WHERE user_id = #{userId}
+          AND id NOT IN (
+              SELECT id FROM (
+                  SELECT id FROM user_browsing_history
+                  WHERE user_id = #{userId}
+                  ORDER BY created_at DESC
+                  LIMIT #{keepCount}
+              ) AS tmp
+          )
+    </delete>
+
 </mapper>
