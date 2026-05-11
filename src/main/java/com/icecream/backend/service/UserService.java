@@ -1,6 +1,7 @@
 package com.icecream.backend.service;
 
 import com.icecream.backend.dto.request.UserUpdateRequest;
+import com.icecream.backend.dto.response.UserInfoResponse;
 import com.icecream.backend.model.User;
 
 import java.util.List;
@@ -56,18 +57,20 @@ public interface UserService {
     boolean isFollowing(Long followerId, Long followingId);
 
     /**
-     * 获取用户的粉丝列表
+     * 获取用户的粉丝列表（含互关状态）
      * @param userId 用户ID
+     * @param currentUserId 当前登录用户ID
      * @return 粉丝用户列表
      */
-    List<User> getFollowers(Long userId);
+    List<UserInfoResponse> getFollowers(Long userId, Long currentUserId);
 
     /**
-     * 获取用户的关注列表
+     * 获取用户的关注列表（含互关状态）
      * @param userId 用户ID
+     * @param currentUserId 当前登录用户ID
      * @return 关注用户列表
      */
-    List<User> getFollowing(Long userId);
+    List<UserInfoResponse> getFollowing(Long userId, Long currentUserId);
 
     /**
      * 更新用户最后登录时间

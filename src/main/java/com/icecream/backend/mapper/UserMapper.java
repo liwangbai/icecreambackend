@@ -217,4 +217,20 @@ public interface UserMapper {
      * @return 粉丝数量
      */
     long countFollowersWithStatus(@Param("userId") Long userId);
+
+    /**
+     * 查询粉丝列表（带互关状态）
+     * @param userId 目标用户ID
+     * @param currentUserId 当前登录用户ID
+     * @return 粉丝用户列表（含互关状态）
+     */
+    List<com.icecream.backend.dto.response.UserInfoResponse> findFollowersWithMutualStatus(@Param("userId") Long userId, @Param("currentUserId") Long currentUserId);
+
+    /**
+     * 查询关注列表（带互关状态）
+     * @param userId 目标用户ID
+     * @param currentUserId 当前登录用户ID
+     * @return 关注用户列表（含互关状态）
+     */
+    List<com.icecream.backend.dto.response.UserInfoResponse> findFollowingWithMutualStatus(@Param("userId") Long userId, @Param("currentUserId") Long currentUserId);
 }

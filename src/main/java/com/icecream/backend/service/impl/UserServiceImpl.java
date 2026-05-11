@@ -2,6 +2,7 @@ package com.icecream.backend.service.impl;
 
 import com.icecream.backend.dto.FileUploadResponse;
 import com.icecream.backend.dto.request.UserUpdateRequest;
+import com.icecream.backend.dto.response.UserInfoResponse;
 import com.icecream.backend.mapper.UserMapper;
 import com.icecream.backend.model.User;
 import com.icecream.backend.service.FileUploadService;
@@ -163,31 +164,15 @@ public class UserServiceImpl implements UserService {
     }
 
     @Override
-    public List<User> getFollowers(Long userId) {
-        log.debug("获取粉丝列表: userId={}", userId);
-
-        List<User> followers = userMapper.findFollowers(userId);
-
-        // 移除敏感信息
-        for (User user : followers) {
-            user.setPasswordHash(null);
-        }
-
-        return followers;
+    public List<UserInfoResponse> getFollowers(Long userId, Long currentUserId) {
+        log.debug("获取粉丝列表: userId={}, currentUserId={}", userId, currentUserId);
+        return userMapper.findFollowersWithMutualStatus(userId, currentUserId);
     }
 
     @Override
-    public List<User> getFollowing(Long userId) {
-        log.debug("获取关注列表: userId={}", userId);
-
-        List<User> following = userMapper.findFollowing(userId);
-
-        // 移除敏感信息
-        for (User user : following) {
-            user.setPasswordHash(null);
-        }
-
-        return following;
+    public List<UserInfoResponse> getFollowing(Long userId, Long currentUserId) {
+        log.debug("获取关注列表: userId={}, currentUserId={}", userId, currentUserId);
+        return userMapper.findFollowingWithMutualStatus(userId, currentUserId);
     }
 
     @Override

@@ -283,4 +283,53 @@
         WHERE uf.following_id = #{userId}
     </select>
 
+    <!-- ========== 用户列表查询（带互关状态） ========== -->
+
+    <!-- 用户信息响应结果映射 -->
+    <resultMap id="userInfoResponseMap" type="com.icecream.backend.dto.response.UserInfoResponse">
+        <id property="id" column="id"/>
+        <result property="username" column="username"/>
+        <result property="nickname" column="nickname"/>
+        <result property="avatarUrl" column="avatar_url"/>
+        <result property="bio" column="bio"/>
+        <result property="gender" column="gender"/>
+        <result property="followerCount" column="follower_count"/>
+        <result property="followingCount" column="following_count"/>
+        <result property="postCount" column="post_count"/>
+        <result property="likeCount" column="like_count"/>
+        <result property="followedBack" column="followed_back"/>
+    </resultMap>
+
+    <!-- 查询粉丝列表（带互关状态） -->
+    <select id="findFollowersWithMutualStatus" resultMap="userInfoResponseMap">
+        SELECT
+            u.id, u.username, u.nickname, u.avatar_url, u.bio, u.gender,
+            u.follower_count, u.following_count, u.post_count, u.like_count,
+            CASE WHEN EXISTS (
+                SELECT 1 FROM user_follows uf2
+                WHERE uf2.follower_id = #{currentUserId}
+                  AND uf2.following_id = u.id
+            ) THEN TRUE ELSE FALSE END as followed_back
+        FROM users u
+        INNER JOIN user_follows uf ON u.id = uf.follower_id
+        WHERE uf.following_id = #{userId}
+        ORDER BY uf.created_at DESC
+    </select>
+
+    <!-- 查询关注列表（带互关状态） -->
+    <select id="findFollowingWithMutualStatus" resultMap="userInfoResponseMap">
+        SELECT
+            u.id, u.username, u.nickname, u.avatar_url, u.bio, u.gender,
+            u.follower_count, u.following_count, u.post_count, u.like_count,
+            CASE WHEN EXISTS (
+                SELECT 1 FROM user_follows uf2
+                WHERE uf2.follower_id = u.id
+                  AND uf2.following_id = #{currentUserId}
+            ) THEN TRUE ELSE FALSE END as followed_back
+        FROM users u
+        INNER JOIN user_follows uf ON u.id = uf.following_id
+        WHERE uf.follower_id = #{userId}
+        ORDER BY uf.created_at DESC
+    </select>
+
 </mapper>
