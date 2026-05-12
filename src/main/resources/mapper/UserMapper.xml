@@ -305,7 +305,8 @@
         <result property="followingCount" column="following_count"/>
         <result property="postCount" column="post_count"/>
         <result property="likeCount" column="like_count"/>
-        <result property="followedBack" column="followed_back"/>
+        <result property="isFollowing" column="is_following"/>
+        <result property="isFollowed" column="is_followed"/>
     </resultMap>
 
     <!-- 查询粉丝列表（带互关状态） -->
@@ -313,11 +314,16 @@
         SELECT
             u.id, u.username, u.nickname, u.avatar_url, u.bio, u.gender,
             u.follower_count, u.following_count, u.post_count, u.like_count,
-            CASE WHEN EXISTS (
+            CASE WHEN #{currentUserId} IS NOT NULL AND EXISTS (
                 SELECT 1 FROM user_follows uf2
                 WHERE uf2.follower_id = #{currentUserId}
                   AND uf2.following_id = u.id
-            ) THEN TRUE ELSE FALSE END as followed_back
+            ) THEN TRUE ELSE FALSE END as is_following,
+            CASE WHEN #{currentUserId} IS NOT NULL AND EXISTS (
+                SELECT 1 FROM user_follows uf2
+                WHERE uf2.follower_id = u.id
+                  AND uf2.following_id = #{currentUserId}
+            ) THEN TRUE ELSE FALSE END as is_followed
         FROM users u
         INNER JOIN user_follows uf ON u.id = uf.follower_id
         WHERE uf.following_id = #{userId}
@@ -329,15 +335,59 @@
         SELECT
             u.id, u.username, u.nickname, u.avatar_url, u.bio, u.gender,
             u.follower_count, u.following_count, u.post_count, u.like_count,
-            CASE WHEN EXISTS (
+            CASE WHEN #{currentUserId} IS NOT NULL AND EXISTS (
+                SELECT 1 FROM user_follows uf2
+                WHERE uf2.follower_id = #{currentUserId}
+                  AND uf2.following_id = u.id
+            ) THEN TRUE ELSE FALSE END as is_following,
+            CASE WHEN #{currentUserId} IS NOT NULL AND EXISTS (
                 SELECT 1 FROM user_follows uf2
                 WHERE uf2.follower_id = u.id
                   AND uf2.following_id = #{currentUserId}
-            ) THEN TRUE ELSE FALSE END as followed_back
+            ) THEN TRUE ELSE FALSE END as is_followed
         FROM users u
         INNER JOIN user_follows uf ON u.id = uf.following_id
         WHERE uf.follower_id = #{userId}
         ORDER BY uf.created_at DESC
+    </select>
+
+    <!-- 根据ID查询用户（带关注状态） -->
+    <select id="findByIdWithFollowStatus" resultMap="userInfoResponseMap">
+        SELECT
+            u.id, u.username, u.nickname, u.avatar_url, u.bio, u.gender,
+            u.follower_count, u.following_count, u.post_count, u.like_count,
+            CASE WHEN #{currentUserId} IS NOT NULL AND EXISTS (
+                SELECT 1 FROM user_follows uf
+                WHERE uf.follower_id = #{currentUserId}
+                  AND uf.following_id = u.id
+            ) THEN TRUE ELSE FALSE END as is_following,
+            CASE WHEN #{currentUserId} IS NOT NULL AND EXISTS (
+                SELECT 1 FROM user_follows uf
+                WHERE uf.follower_id = u.id
+                  AND uf.following_id = #{currentUserId}
+            ) THEN TRUE ELSE FALSE END as is_followed
+        FROM users u
+        WHERE u.id = #{userId}
+    </select>
+
+    <!-- 根据昵称关键词模糊搜索用户（含互关状态） -->
+    <select id="findByNickname" resultMap="userInfoResponseMap">
+        SELECT
+            u.id, u.username, u.nickname, u.avatar_url, u.bio, u.gender,
+            u.follower_count, u.following_count, u.post_count, u.like_count,
+            CASE WHEN #{currentUserId} IS NOT NULL AND EXISTS (
+                SELECT 1 FROM user_follows uf
+                WHERE uf.follower_id = #{currentUserId}
+                  AND uf.following_id = u.id
+            ) THEN TRUE ELSE FALSE END as is_following,
+            CASE WHEN #{currentUserId} IS NOT NULL AND EXISTS (
+                SELECT 1 FROM user_follows uf
+                WHERE uf.follower_id = u.id
+                  AND uf.following_id = #{currentUserId}
+            ) THEN TRUE ELSE FALSE END as is_followed
+        FROM users u
+        WHERE u.nickname LIKE CONCAT('%', #{keyword}, '%')
+        ORDER BY u.follower_count DESC, u.id ASC
     </select>
 
 </mapper>

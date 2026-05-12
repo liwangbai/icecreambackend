@@ -27,6 +27,14 @@ public interface UserService {
     User getUserById(Long userId);
 
     /**
+     * 根据ID获取用户公开信息（含关注状态）
+     * @param userId 用户ID
+     * @param currentUserId 当前用户ID，可为null（游客模式）
+     * @return 用户信息（含关注状态）
+     */
+    UserInfoResponse getUserProfile(Long userId, Long currentUserId);
+
+    /**
      * 更新用户信息
      * @param userId 用户ID
      * @param request 更新请求
@@ -85,4 +93,12 @@ public interface UserService {
      * @return 头像URL
      */
     String updateAvatar(Long userId, org.springframework.web.multipart.MultipartFile file);
+
+    /**
+     * 根据昵称关键词搜索用户
+     * @param keyword 搜索关键词
+     * @param currentUserId 当前用户ID，可为null（游客模式）
+     * @return 用户信息列表
+     */
+    List<UserInfoResponse> searchByNickname(String keyword, Long currentUserId);
 }

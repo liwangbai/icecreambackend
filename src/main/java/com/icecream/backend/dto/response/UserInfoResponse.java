@@ -37,6 +37,9 @@ public class UserInfoResponse {
 
     private Integer likeCount;
 
-    /** 当前用户是否与该用户互相关注 */
-    private Boolean followedBack;
+    /** 当前用户是否关注了该用户（我关注TA） */
+    private Boolean isFollowing;
+
+    /** 该用户是否关注了当前用户（TA关注我） */
+    private Boolean isFollowed;
 }

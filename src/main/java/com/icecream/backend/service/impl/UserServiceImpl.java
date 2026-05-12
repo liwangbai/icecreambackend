@@ -52,9 +52,18 @@ public class UserServiceImpl implements UserService {
         }
 
         User user = userOpt.get();
-        // 移除敏感信息（如密码哈希）
         user.setPasswordHash(null);
         return user;
+    }
+
+    @Override
+    public UserInfoResponse getUserProfile(Long userId, Long currentUserId) {
+        log.debug("获取用户公开信息（含关注状态）: userId={}, currentUserId={}", userId, currentUserId);
+        UserInfoResponse userInfo = userMapper.findByIdWithFollowStatus(userId, currentUserId);
+        if (userInfo == null) {
+            throw new RuntimeException("用户不存在: " + userId);
+        }
+        return userInfo;
     }
 
     @Override
@@ -180,6 +189,12 @@ public class UserServiceImpl implements UserService {
     public void updateLastLogin(Long userId) {
         log.debug("更新最后登录时间: userId={}", userId);
         userMapper.updateLastLogin(userId);
+    }
+
+    @Override
+    public List<UserInfoResponse> searchByNickname(String keyword, Long currentUserId) {
+        log.debug("搜索用户: keyword={}, currentUserId={}", keyword, currentUserId);
+        return userMapper.findByNickname(keyword, currentUserId);
     }
 
     @Override

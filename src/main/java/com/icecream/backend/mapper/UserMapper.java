@@ -210,6 +210,22 @@ public interface UserMapper {
     Optional<User> findByUsernameOrEmail(@Param("usernameOrEmail") String usernameOrEmail);
 
     /**
+     * 根据昵称关键词模糊搜索用户，返回用户信息列表（含互关状态）
+     * @param keyword 搜索关键词
+     * @param currentUserId 当前登录用户ID，可为null（游客模式）
+     * @return 用户信息列表
+     */
+    List<com.icecream.backend.dto.response.UserInfoResponse> findByNickname(@Param("keyword") String keyword, @Param("currentUserId") Long currentUserId);
+
+    /**
+     * 根据ID查询用户（带关注状态）
+     * @param userId 目标用户ID
+     * @param currentUserId 当前登录用户ID，可为null（游客模式）
+     * @return 用户信息（含关注状态）
+     */
+    com.icecream.backend.dto.response.UserInfoResponse findByIdWithFollowStatus(@Param("userId") Long userId, @Param("currentUserId") Long currentUserId);
+
+    /**
      * 查询粉丝列表（带是否回关标志）
      * @param userId 当前用户ID
      * @return 关注通知列表

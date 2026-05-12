@@ -54,11 +54,27 @@ public class UserController {
     }
 
     @GetMapping("/{userId}")
-    @Operation(summary = "获取用户公开信息", description = "根据用户ID获取用户的公开信息")
-    public ResponseEntity<ApiResponse<User>> getUserById(@PathVariable Long userId) {
-        log.info("获取用户信息: userId={}", userId);
-        User user = userService.getUserById(userId);
-        return ResponseEntity.ok(ApiResponse.success("获取成功", user));
+    @Operation(summary = "获取用户公开信息", description = "根据用户ID获取用户的公开信息，包含关注状态（isFollowing、isFollowed）")
+    public ResponseEntity<ApiResponse<UserInfoResponse>> getUserById(@PathVariable Long userId) {
+        Long currentUserId = SecurityUtil.getCurrentUserIdOrNull();
+        log.info("获取用户信息: userId={}, currentUserId={}", userId, currentUserId);
+        UserInfoResponse userInfo = userService.getUserProfile(userId, currentUserId);
+        return ResponseEntity.ok(ApiResponse.success("获取成功", userInfo));
+    }
+
+    @GetMapping("/search")
+    @Operation(summary = "搜索用户", description = "根据昵称关键词搜索用户，支持分页")
+    public ResponseEntity<ApiResponse<PagedResult<UserInfoResponse>>> searchUsers(
+            @Parameter(description = "搜索关键词", required = true) @RequestParam String keyword,
+            @Parameter(description = "页码，从0开始") @RequestParam(required = false, defaultValue = "0") Integer page,
+            @Parameter(description = "每页大小") @RequestParam(required = false, defaultValue = "20") Integer size) {
+        Long currentUserId = SecurityUtil.getCurrentUserIdOrNull();
+        log.info("搜索用户: keyword={}, currentUserId={}, page={}, size={}", keyword, currentUserId, page, size);
+        com.github.pagehelper.PageHelper.startPage(page + 1, size);
+        List<UserInfoResponse> users = userService.searchByNickname(keyword, currentUserId);
+        long total = ((Page) users).getTotal();
+        PagedResult<UserInfoResponse> pagedResult = PagedResult.of(users, total, page, size);
+        return ResponseEntity.ok(ApiResponse.success("搜索成功", pagedResult));
     }
 
     @PostMapping("/{userId}/follow")
