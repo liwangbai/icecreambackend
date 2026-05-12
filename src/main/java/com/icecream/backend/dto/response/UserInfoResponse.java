@@ -42,4 +42,13 @@ public class UserInfoResponse {
 
     /** 该用户是否关注了当前用户（TA关注我） */
     private Boolean isFollowed;
+
+    /** 收藏的帖子数 */
+    private Integer collectionCount;
+
+    /** 浏览历史条数 */
+    private Integer historyCount;
+
+    /** 该用户的帖子被收藏总数 */
+    private Integer receivedFavoriteCount;
 }

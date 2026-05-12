@@ -305,6 +305,9 @@
         <result property="followingCount" column="following_count"/>
         <result property="postCount" column="post_count"/>
         <result property="likeCount" column="like_count"/>
+        <result property="collectionCount" column="collection_count"/>
+        <result property="historyCount" column="history_count"/>
+        <result property="receivedFavoriteCount" column="received_favorite_count"/>
         <result property="isFollowing" column="is_following"/>
         <result property="isFollowed" column="is_followed"/>
     </resultMap>
@@ -356,6 +359,8 @@
         SELECT
             u.id, u.username, u.nickname, u.avatar_url, u.bio, u.gender,
             u.follower_count, u.following_count, u.post_count, u.like_count,
+            u.collection_count, u.history_count,
+            (SELECT COALESCE(SUM(favorite_count), 0) FROM posts WHERE user_id = u.id) AS received_favorite_count,
             CASE WHEN #{currentUserId} IS NOT NULL AND EXISTS (
                 SELECT 1 FROM user_follows uf
                 WHERE uf.follower_id = #{currentUserId}
