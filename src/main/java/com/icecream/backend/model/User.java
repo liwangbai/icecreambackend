@@ -89,4 +89,14 @@ public class User extends BaseEntity {
      * 浏览历史条数
      */
     private Integer historyCount;
+
+    /**
+     * 关注列表可见性：0-仅自己可见，1-所有人可见
+     */
+    private Integer followingVisibility;
+
+    /**
+     * 粉丝列表可见性：0-仅自己可见，1-所有人可见
+     */
+    private Integer followerVisibility;
 }

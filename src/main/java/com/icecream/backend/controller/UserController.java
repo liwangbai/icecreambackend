@@ -3,7 +3,9 @@ package com.icecream.backend.controller;
 import com.github.pagehelper.Page;
 import com.icecream.backend.dto.ApiResponse;
 import com.icecream.backend.dto.PagedResult;
+import com.icecream.backend.dto.request.PrivacySettingsRequest;
 import com.icecream.backend.dto.request.UserUpdateRequest;
+import com.icecream.backend.dto.response.PrivacySettingsResponse;
 import com.icecream.backend.dto.response.UserInfoResponse;
 import com.icecream.backend.model.User;
 import com.icecream.backend.service.UserService;
@@ -103,8 +105,7 @@ public class UserController {
             @Parameter(description = "每页大小") @RequestParam(required = false, defaultValue = "20") Integer size) {
         Long currentUserId = SecurityUtil.getCurrentUserId();
         log.info("获取粉丝列表: userId={}, currentUserId={}, page={}, size={}", userId, currentUserId, page, size);
-        com.github.pagehelper.PageHelper.startPage(page + 1, size);
-        List<UserInfoResponse> followers = userService.getFollowers(userId, currentUserId);
+        List<UserInfoResponse> followers = userService.getFollowers(userId, currentUserId, page + 1, size);
         long total = ((Page) followers).getTotal();
         PagedResult<UserInfoResponse> pagedResult = PagedResult.of(followers, total, page, size);
         return ResponseEntity.ok(ApiResponse.success("获取成功", pagedResult));
@@ -118,8 +119,7 @@ public class UserController {
             @Parameter(description = "每页大小") @RequestParam(required = false, defaultValue = "20") Integer size) {
         Long currentUserId = SecurityUtil.getCurrentUserId();
         log.info("获取关注列表: userId={}, currentUserId={}, page={}, size={}", userId, currentUserId, page, size);
-        com.github.pagehelper.PageHelper.startPage(page + 1, size);
-        List<UserInfoResponse> following = userService.getFollowing(userId, currentUserId);
+        List<UserInfoResponse> following = userService.getFollowing(userId, currentUserId, page + 1, size);
         long total = ((Page) following).getTotal();
         PagedResult<UserInfoResponse> pagedResult = PagedResult.of(following, total, page, size);
         return ResponseEntity.ok(ApiResponse.success("获取成功", pagedResult));
@@ -144,6 +144,26 @@ public class UserController {
         log.info("更新用户头像: userId={}", currentUserId);
         String avatarUrl = userService.updateAvatar(currentUserId, file);
         return ResponseEntity.ok(ApiResponse.success("头像更新成功", avatarUrl));
+    }
+
+    @GetMapping("/me/settings")
+    @Operation(summary = "获取隐私设置", description = "获取当前用户的隐私设置（关注列表/粉丝列表可见性）")
+    public ResponseEntity<ApiResponse<PrivacySettingsResponse>> getPrivacySettings() {
+        Long currentUserId = SecurityUtil.getCurrentUserId();
+        log.info("获取隐私设置: userId={}", currentUserId);
+        PrivacySettingsResponse settings = userService.getPrivacySettings(currentUserId);
+        return ResponseEntity.ok(ApiResponse.success("获取成功", settings));
+    }
+
+    @PutMapping("/me/settings")
+    @Operation(summary = "更新隐私设置", description = "更新当前用户的隐私设置（关注列表/粉丝列表可见性）")
+    public ResponseEntity<ApiResponse<PrivacySettingsResponse>> updatePrivacySettings(
+            @Valid @RequestBody PrivacySettingsRequest request) {
+        Long currentUserId = SecurityUtil.getCurrentUserId();
+        log.info("更新隐私设置: userId={}, followingVisibility={}, followerVisibility={}",
+                currentUserId, request.getFollowingVisibility(), request.getFollowerVisibility());
+        PrivacySettingsResponse settings = userService.updatePrivacySettings(currentUserId, request);
+        return ResponseEntity.ok(ApiResponse.success("更新成功", settings));
     }
 
 }

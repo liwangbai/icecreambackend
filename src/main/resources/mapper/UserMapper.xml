@@ -21,6 +21,8 @@
         <result property="likeCount" column="like_count"/>
         <result property="collectionCount" column="collection_count"/>
         <result property="historyCount" column="history_count"/>
+        <result property="followingVisibility" column="following_visibility"/>
+        <result property="followerVisibility" column="follower_visibility"/>
         <result property="createdAt" column="created_at"/>
         <result property="updatedAt" column="updated_at"/>
     </resultMap>
@@ -56,11 +58,11 @@
         INSERT INTO users (
             username, email, password_hash, nickname, avatar_url, bio,
             gender, status, role, last_login_at, post_count, follower_count, following_count,
-            like_count, collection_count, history_count
+            like_count, collection_count, history_count, following_visibility, follower_visibility
         ) VALUES (
             #{username}, #{email}, #{passwordHash}, #{nickname}, #{avatarUrl}, #{bio},
             #{gender}, #{status}, #{role}, #{lastLoginAt}, #{postCount}, #{followerCount}, #{followingCount},
-            #{likeCount}, #{collectionCount}, #{historyCount}
+            #{likeCount}, #{collectionCount}, #{historyCount}, #{followingVisibility}, #{followerVisibility}
         )
     </insert>
 
@@ -81,6 +83,8 @@
             <if test="postCount != null">post_count = #{postCount},</if>
             <if test="followerCount != null">follower_count = #{followerCount},</if>
             <if test="followingCount != null">following_count = #{followingCount},</if>
+            <if test="followingVisibility != null">following_visibility = #{followingVisibility},</if>
+            <if test="followerVisibility != null">follower_visibility = #{followerVisibility},</if>
             updated_at = NOW()
         </set>
         WHERE id = #{id}
@@ -307,6 +311,8 @@
         <result property="likeCount" column="like_count"/>
         <result property="collectionCount" column="collection_count"/>
         <result property="historyCount" column="history_count"/>
+        <result property="followingVisibility" column="following_visibility"/>
+        <result property="followerVisibility" column="follower_visibility"/>
         <result property="receivedFavoriteCount" column="received_favorite_count"/>
         <result property="isFollowing" column="is_following"/>
         <result property="isFollowed" column="is_followed"/>
@@ -322,6 +328,7 @@
             COALESCE(u.like_count, 0) AS like_count,
             COALESCE(u.collection_count, 0) AS collection_count,
             COALESCE(u.history_count, 0) AS history_count,
+            u.following_visibility, u.follower_visibility,
             CASE WHEN #{currentUserId} IS NOT NULL AND EXISTS (
                 SELECT 1 FROM user_follows uf2
                 WHERE uf2.follower_id = #{currentUserId}
@@ -348,6 +355,7 @@
             COALESCE(u.like_count, 0) AS like_count,
             COALESCE(u.collection_count, 0) AS collection_count,
             COALESCE(u.history_count, 0) AS history_count,
+            u.following_visibility, u.follower_visibility,
             CASE WHEN #{currentUserId} IS NOT NULL AND EXISTS (
                 SELECT 1 FROM user_follows uf2
                 WHERE uf2.follower_id = #{currentUserId}
@@ -374,6 +382,7 @@
             COALESCE(u.like_count, 0) AS like_count,
             (SELECT COUNT(*) FROM post_favorites pf INNER JOIN posts p ON pf.post_id = p.id WHERE pf.user_id = u.id AND p.status = 1 AND p.visibility = 1) AS collection_count,
             (SELECT COUNT(*) FROM user_browsing_history ubh INNER JOIN posts p ON ubh.post_id = p.id WHERE ubh.user_id = u.id AND p.status = 1 AND p.visibility = 1) AS history_count,
+            u.following_visibility, u.follower_visibility,
             (SELECT COALESCE(SUM(favorite_count), 0) FROM posts WHERE user_id = u.id) AS received_favorite_count,
             CASE WHEN #{currentUserId} IS NOT NULL AND EXISTS (
                 SELECT 1 FROM user_follows uf
@@ -399,6 +408,7 @@
             COALESCE(u.like_count, 0) AS like_count,
             COALESCE(u.collection_count, 0) AS collection_count,
             COALESCE(u.history_count, 0) AS history_count,
+            u.following_visibility, u.follower_visibility,
             CASE WHEN #{currentUserId} IS NOT NULL AND EXISTS (
                 SELECT 1 FROM user_follows uf
                 WHERE uf.follower_id = #{currentUserId}

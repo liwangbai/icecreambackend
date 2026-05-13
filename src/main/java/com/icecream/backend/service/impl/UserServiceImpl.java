@@ -1,8 +1,11 @@
 package com.icecream.backend.service.impl;
 
 import com.icecream.backend.dto.FileUploadResponse;
+import com.icecream.backend.dto.request.PrivacySettingsRequest;
 import com.icecream.backend.dto.request.UserUpdateRequest;
+import com.icecream.backend.dto.response.PrivacySettingsResponse;
 import com.icecream.backend.dto.response.UserInfoResponse;
+import com.icecream.backend.exception.ForbiddenException;
 import com.icecream.backend.mapper.UserMapper;
 import com.icecream.backend.model.User;
 import com.icecream.backend.service.FileUploadService;
@@ -173,14 +176,34 @@ public class UserServiceImpl implements UserService {
     }
 
     @Override
-    public List<UserInfoResponse> getFollowers(Long userId, Long currentUserId) {
+    public List<UserInfoResponse> getFollowers(Long userId, Long currentUserId, int page, int size) {
         log.debug("获取粉丝列表: userId={}, currentUserId={}", userId, currentUserId);
+
+        // 检查隐私设置：非本人查看时，检查粉丝列表可见性
+        if (!userId.equals(currentUserId)) {
+            User targetUser = getTargetUserForPrivacyCheck(userId);
+            if (targetUser.getFollowerVisibility() != null && targetUser.getFollowerVisibility() == 0) {
+                throw new ForbiddenException("该用户设置了粉丝列表不可见");
+            }
+        }
+
+        com.github.pagehelper.PageHelper.startPage(page, size);
         return userMapper.findFollowersWithMutualStatus(userId, currentUserId);
     }
 
     @Override
-    public List<UserInfoResponse> getFollowing(Long userId, Long currentUserId) {
+    public List<UserInfoResponse> getFollowing(Long userId, Long currentUserId, int page, int size) {
         log.debug("获取关注列表: userId={}, currentUserId={}", userId, currentUserId);
+
+        // 检查隐私设置：非本人查看时，检查关注列表可见性
+        if (!userId.equals(currentUserId)) {
+            User targetUser = getTargetUserForPrivacyCheck(userId);
+            if (targetUser.getFollowingVisibility() != null && targetUser.getFollowingVisibility() == 0) {
+                throw new ForbiddenException("该用户设置了关注列表不可见");
+            }
+        }
+
+        com.github.pagehelper.PageHelper.startPage(page, size);
         return userMapper.findFollowingWithMutualStatus(userId, currentUserId);
     }
 
@@ -224,5 +247,49 @@ public class UserServiceImpl implements UserService {
             log.error("头像上传失败: userId={}, error={}", userId, e.getMessage());
             throw new RuntimeException("头像上传失败: " + e.getMessage());
         }
+    }
+
+    @Override
+    public PrivacySettingsResponse getPrivacySettings(Long userId) {
+        log.debug("获取隐私设置: userId={}", userId);
+        User user = getTargetUserForPrivacyCheck(userId);
+        return PrivacySettingsResponse.builder()
+                .followingVisibility(user.getFollowingVisibility())
+                .followerVisibility(user.getFollowerVisibility())
+                .build();
+    }
+
+    @Override
+    @Transactional
+    public PrivacySettingsResponse updatePrivacySettings(Long userId, PrivacySettingsRequest request) {
+        log.info("更新隐私设置: userId={}, followingVisibility={}, followerVisibility={}",
+                userId, request.getFollowingVisibility(), request.getFollowerVisibility());
+
+        User user = getTargetUserForPrivacyCheck(userId);
+
+        if (request.getFollowingVisibility() != null) {
+            user.setFollowingVisibility(request.getFollowingVisibility());
+        }
+        if (request.getFollowerVisibility() != null) {
+            user.setFollowerVisibility(request.getFollowerVisibility());
+        }
+
+        userMapper.update(user);
+
+        return PrivacySettingsResponse.builder()
+                .followingVisibility(user.getFollowingVisibility())
+                .followerVisibility(user.getFollowerVisibility())
+                .build();
+    }
+
+    /**
+     * 获取目标用户信息用于隐私检查，避免重复查询
+     */
+    private User getTargetUserForPrivacyCheck(Long userId) {
+        Optional<User> userOpt = userMapper.findById(userId);
+        if (!userOpt.isPresent()) {
+            throw new RuntimeException("用户不存在: " + userId);
+        }
+        return userOpt.get();
     }
 }

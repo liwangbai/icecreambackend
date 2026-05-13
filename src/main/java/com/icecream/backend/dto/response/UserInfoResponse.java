@@ -51,4 +51,10 @@ public class UserInfoResponse {
 
     /** 该用户的帖子被收藏总数 */
     private Integer receivedFavoriteCount;
+
+    /** 关注列表可见性：0-仅自己可见，1-所有人可见 */
+    private Integer followingVisibility;
+
+    /** 粉丝列表可见性：0-仅自己可见，1-所有人可见 */
+    private Integer followerVisibility;
 }

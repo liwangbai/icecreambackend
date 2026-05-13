@@ -24,6 +24,8 @@ CREATE TABLE IF NOT EXISTS users (
     like_count INT DEFAULT 0 COMMENT '获赞数（帖子点赞数+评论点赞数）',
     collection_count INT DEFAULT 0 COMMENT '收藏的帖子数',
     history_count INT DEFAULT 0 COMMENT '浏览历史条数',
+    following_visibility INT DEFAULT 1 COMMENT '关注列表可见性：0-仅自己可见，1-所有人可见',
+    follower_visibility INT DEFAULT 1 COMMENT '粉丝列表可见性：0-仅自己可见，1-所有人可见',
     created_at DATETIME DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
     updated_at DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT '更新时间',
     INDEX idx_username (username),

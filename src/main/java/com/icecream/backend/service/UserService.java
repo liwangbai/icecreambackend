@@ -1,6 +1,8 @@
 package com.icecream.backend.service;
 
+import com.icecream.backend.dto.request.PrivacySettingsRequest;
 import com.icecream.backend.dto.request.UserUpdateRequest;
+import com.icecream.backend.dto.response.PrivacySettingsResponse;
 import com.icecream.backend.dto.response.UserInfoResponse;
 import com.icecream.backend.model.User;
 
@@ -65,20 +67,24 @@ public interface UserService {
     boolean isFollowing(Long followerId, Long followingId);
 
     /**
-     * 获取用户的粉丝列表（含互关状态）
+     * 获取用户的粉丝列表（含互关状态，支持分页）
      * @param userId 用户ID
      * @param currentUserId 当前登录用户ID
+     * @param page 页码（PageHelper页码，从1开始）
+     * @param size 每页大小
      * @return 粉丝用户列表
      */
-    List<UserInfoResponse> getFollowers(Long userId, Long currentUserId);
+    List<UserInfoResponse> getFollowers(Long userId, Long currentUserId, int page, int size);
 
     /**
-     * 获取用户的关注列表（含互关状态）
+     * 获取用户的关注列表（含互关状态，支持分页）
      * @param userId 用户ID
      * @param currentUserId 当前登录用户ID
+     * @param page 页码（PageHelper页码，从1开始）
+     * @param size 每页大小
      * @return 关注用户列表
      */
-    List<UserInfoResponse> getFollowing(Long userId, Long currentUserId);
+    List<UserInfoResponse> getFollowing(Long userId, Long currentUserId, int page, int size);
 
     /**
      * 更新用户最后登录时间
@@ -101,4 +107,19 @@ public interface UserService {
      * @return 用户信息列表
      */
     List<UserInfoResponse> searchByNickname(String keyword, Long currentUserId);
+
+    /**
+     * 获取当前用户的隐私设置
+     * @param userId 用户ID
+     * @return 隐私设置
+     */
+    PrivacySettingsResponse getPrivacySettings(Long userId);
+
+    /**
+     * 更新当前用户的隐私设置
+     * @param userId 用户ID
+     * @param request 隐私设置请求
+     * @return 更新后的隐私设置
+     */
+    PrivacySettingsResponse updatePrivacySettings(Long userId, PrivacySettingsRequest request);
 }
