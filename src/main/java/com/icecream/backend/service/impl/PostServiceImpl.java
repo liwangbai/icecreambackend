@@ -344,10 +344,10 @@ public class PostServiceImpl implements PostService {
     }
 
     @Override
-    public List<Post> getUserFavorites(Long userId) {
-        log.debug("查询用户收藏的帖子: userId={}", userId);
+    public List<Post> getUserFavorites(Long userId, Long currentUserId) {
+        log.debug("查询用户收藏的帖子: userId={}, currentUserId={}", userId, currentUserId);
 
-        List<Post> posts = postMapper.findUserFavorites(userId);
+        List<Post> posts = postMapper.findUserFavorites(userId, currentUserId);
 
         for (Post post : posts) {
             enrichPostMetadata(post);

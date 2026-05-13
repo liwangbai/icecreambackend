@@ -509,22 +509,25 @@
             u.username as author_username,
             u.nickname as author_nickname,
             u.avatar_url as author_avatar_url,
-            <if test="userId != null">
+            <if test="currentUserId != null">
                 CASE WHEN EXISTS (
                     SELECT 1 FROM post_likes pl
-                    WHERE pl.post_id = p.id AND pl.user_id = #{userId}
+                    WHERE pl.post_id = p.id AND pl.user_id = #{currentUserId}
                 ) THEN TRUE ELSE FALSE END as liked,
-                TRUE as favorited,
+                CASE WHEN EXISTS (
+                    SELECT 1 FROM post_favorites pf2
+                    WHERE pf2.post_id = p.id AND pf2.user_id = #{currentUserId}
+                ) THEN TRUE ELSE FALSE END as favorited,
                 CASE WHEN EXISTS (
                     SELECT 1 FROM user_follows uf
-                    WHERE uf.follower_id = #{userId} AND uf.following_id = p.user_id
+                    WHERE uf.follower_id = #{currentUserId} AND uf.following_id = p.user_id
                 ) THEN TRUE ELSE FALSE END as followed,
                 CASE WHEN EXISTS (
                     SELECT 1 FROM user_follows uf
-                    WHERE uf.follower_id = p.user_id AND uf.following_id = #{userId}
+                    WHERE uf.follower_id = p.user_id AND uf.following_id = #{currentUserId}
                 ) THEN TRUE ELSE FALSE END as follow_me
             </if>
-            <if test="userId == null">
+            <if test="currentUserId == null">
                 FALSE as liked,
                 FALSE as favorited,
                 FALSE as followed,

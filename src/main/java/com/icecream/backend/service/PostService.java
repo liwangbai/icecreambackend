@@ -111,10 +111,11 @@ public interface PostService {
 
     /**
      * 获取用户收藏的帖子列表
-     * @param userId 用户ID
+     * @param userId 目标用户ID
+     * @param currentUserId 当前登录用户ID（用于判断点赞/关注状态，可为null）
      * @return 帖子列表
      */
-    List<Post> getUserFavorites(Long userId);
+    List<Post> getUserFavorites(Long userId, Long currentUserId);
 
     /**
      * 统计用户收藏的帖子数量

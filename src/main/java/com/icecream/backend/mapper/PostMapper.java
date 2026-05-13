@@ -219,10 +219,11 @@ public interface PostMapper {
 
     /**
      * 查询用户收藏的帖子（支持分页）
-     * @param userId 用户ID
+     * @param userId 目标用户ID（查询该用户的收藏列表）
+     * @param currentUserId 当前登录用户ID（用于判断点赞/关注状态，可为null）
      * @return 帖子列表
      */
-    List<Post> findUserFavorites(@Param("userId") Long userId);
+    List<Post> findUserFavorites(@Param("userId") Long userId, @Param("currentUserId") Long currentUserId);
 
     /**
      * 统计用户收藏的帖子数量

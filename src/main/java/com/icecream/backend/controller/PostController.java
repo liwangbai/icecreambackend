@@ -222,8 +222,25 @@ public class PostController {
 
         // 使用PageHelper分页
         com.github.pagehelper.PageHelper.startPage(page + 1, size);
-        List<Post> posts = postService.getUserFavorites(currentUserId);
+        List<Post> posts = postService.getUserFavorites(currentUserId, currentUserId);
         long total = postService.countUserFavorites(currentUserId);
+
+        PagedResult<Post> pagedResult = PagedResult.of(posts, total, page, size);
+        return ResponseEntity.ok(ApiResponse.success("获取成功", pagedResult));
+    }
+
+    @GetMapping("/user/{userId}/favorites")
+    @Operation(summary = "获取目标用户收藏列表", description = "查询指定用户收藏的帖子列表，仅返回公开已发布的帖子，支持分页")
+    public ResponseEntity<ApiResponse<PagedResult<Post>>> getUserFavoritesByUserId(
+            @Parameter(description = "目标用户ID") @PathVariable Long userId,
+            @Parameter(description = "页码，从0开始") @RequestParam(required = false, defaultValue = "0") Integer page,
+            @Parameter(description = "每页大小") @RequestParam(required = false, defaultValue = "20") Integer size) {
+        Long currentUserId = SecurityUtil.getCurrentUserIdOrNull();
+        log.debug("获取目标用户收藏列表: userId={}, currentUserId={}, page={}, size={}", userId, currentUserId, page, size);
+
+        com.github.pagehelper.PageHelper.startPage(page + 1, size);
+        List<Post> posts = postService.getUserFavorites(userId, currentUserId);
+        long total = postService.countUserFavorites(userId);
 
         PagedResult<Post> pagedResult = PagedResult.of(posts, total, page, size);
         return ResponseEntity.ok(ApiResponse.success("获取成功", pagedResult));
