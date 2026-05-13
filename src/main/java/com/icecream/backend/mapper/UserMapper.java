@@ -218,6 +218,13 @@ public interface UserMapper {
     List<com.icecream.backend.dto.response.UserInfoResponse> findByNickname(@Param("keyword") String keyword, @Param("currentUserId") Long currentUserId);
 
     /**
+     * 根据昵称精确查询用户（用于唯一性校验）
+     * @param nickname 昵称
+     * @return 用户信息
+     */
+    User findByNicknameExact(@Param("nickname") String nickname);
+
+    /**
      * 根据ID查询用户（带关注状态）
      * @param userId 目标用户ID
      * @param currentUserId 当前登录用户ID，可为null（游客模式）

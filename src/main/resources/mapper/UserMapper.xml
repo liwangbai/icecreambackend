@@ -398,6 +398,12 @@
         WHERE u.id = #{userId}
     </select>
 
+    <!-- 根据昵称精确查询用户（用于唯一性校验） -->
+    <select id="findByNicknameExact" resultMap="userResultMap">
+        SELECT * FROM users
+        WHERE nickname = #{nickname}
+    </select>
+
     <!-- 根据昵称关键词模糊搜索用户（含互关状态） -->
     <select id="findByNickname" resultMap="userInfoResponseMap">
         SELECT

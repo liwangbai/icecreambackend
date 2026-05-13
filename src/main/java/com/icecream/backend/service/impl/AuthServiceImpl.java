@@ -49,7 +49,15 @@ public class AuthServiceImpl implements AuthService {
         User user = new User();
         user.setUsername(request.getPhone());
         user.setPasswordHash(passwordEncoder.encode(request.getPassword()));
-        user.setNickname("番薯" + request.getPhone().substring(request.getPhone().length() - 4));
+        // 生成默认昵称，确保唯一
+        String baseNickname = "番薯" + request.getPhone().substring(request.getPhone().length() - 4);
+        String nickname = baseNickname;
+        int suffix = 1;
+        while (userMapper.findByNicknameExact(nickname) != null) {
+            nickname = baseNickname + suffix;
+            suffix++;
+        }
+        user.setNickname(nickname);
         user.setAvatarUrl(null);
         user.setBio(null);
         user.setGender(0); // 默认未知

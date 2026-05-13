@@ -83,7 +83,12 @@ public class UserServiceImpl implements UserService {
         User user = userOpt.get();
 
         // 更新允许修改的字段
-        if (request.getNickname() != null) {
+        if (request.getNickname() != null && !request.getNickname().equals(user.getNickname())) {
+            // 检查昵称是否已被其他用户使用
+            User nicknameUser = userMapper.findByNicknameExact(request.getNickname());
+            if (nicknameUser != null && !nicknameUser.getId().equals(userId)) {
+                throw new RuntimeException("昵称已被其他用户使用");
+            }
             user.setNickname(request.getNickname());
         }
         if (request.getBio() != null) {
