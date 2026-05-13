@@ -39,37 +39,48 @@ public class AuthServiceImpl implements AuthService {
     public AuthResponse register(RegisterRequest request) {
         log.info("用户注册: phone={}", request.getPhone());
 
-        // 检查用户名是否已存在（手机号作为账号存入username）
+        // 检查该手机号是否已注册
+        User user;
         Optional<User> existingUserByUsername = userMapper.findByUsername(request.getPhone());
         if (existingUserByUsername.isPresent()) {
-            throw new ConflictException("该手机号已注册");
-        }
+            User existingUser = existingUserByUsername.get();
+            if (existingUser.getStatus() == 0) {
+                // 已注销用户重新注册：激活账号并更新密码
+                log.info("已注销用户重新注册: userId={}, phone={}", existingUser.getId(), request.getPhone());
+                existingUser.setPasswordHash(passwordEncoder.encode(request.getPassword()));
+                existingUser.setStatus(1);
+                userMapper.update(existingUser);
+                user = existingUser;
+            } else {
+                throw new ConflictException("该手机号已注册");
+            }
+        } else {
+            // 创建新用户对象
+            user = new User();
+            user.setUsername(request.getPhone());
+            user.setPasswordHash(passwordEncoder.encode(request.getPassword()));
+            // 生成默认昵称，确保唯一
+            String baseNickname = "番薯" + request.getPhone().substring(request.getPhone().length() - 4);
+            String nickname = baseNickname;
+            int suffix = 1;
+            while (userMapper.findByNicknameExact(nickname) != null) {
+                nickname = baseNickname + suffix;
+                suffix++;
+            }
+            user.setNickname(nickname);
+            user.setAvatarUrl(null);
+            user.setBio(null);
+            user.setGender(0); // 默认未知
+            user.setStatus(1); // 启用
+            user.setRole("ROLE_USER");
+            user.setLastLoginAt(null);
+            user.setPostCount(0);
+            user.setFollowerCount(0);
+            user.setFollowingCount(0);
 
-        // 创建用户对象
-        User user = new User();
-        user.setUsername(request.getPhone());
-        user.setPasswordHash(passwordEncoder.encode(request.getPassword()));
-        // 生成默认昵称，确保唯一
-        String baseNickname = "番薯" + request.getPhone().substring(request.getPhone().length() - 4);
-        String nickname = baseNickname;
-        int suffix = 1;
-        while (userMapper.findByNicknameExact(nickname) != null) {
-            nickname = baseNickname + suffix;
-            suffix++;
+            // 插入数据库
+            userMapper.insert(user);
         }
-        user.setNickname(nickname);
-        user.setAvatarUrl(null);
-        user.setBio(null);
-        user.setGender(0); // 默认未知
-        user.setStatus(1); // 启用
-        user.setRole("ROLE_USER");
-        user.setLastLoginAt(null);
-        user.setPostCount(0);
-        user.setFollowerCount(0);
-        user.setFollowingCount(0);
-
-        // 插入数据库
-        userMapper.insert(user);
 
         log.info("用户注册成功: userId={}, phone={}", user.getId(), request.getPhone());
 
