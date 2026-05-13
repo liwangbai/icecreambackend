@@ -1,5 +1,6 @@
 package com.icecream.backend.service;
 
+import com.icecream.backend.dto.request.ChangePasswordRequest;
 import com.icecream.backend.dto.request.PrivacySettingsRequest;
 import com.icecream.backend.dto.request.UserUpdateRequest;
 import com.icecream.backend.dto.response.PrivacySettingsResponse;
@@ -122,4 +123,17 @@ public interface UserService {
      * @return 更新后的隐私设置
      */
     PrivacySettingsResponse updatePrivacySettings(Long userId, PrivacySettingsRequest request);
+
+    /**
+     * 注销账号（软删除，设置status=0）
+     * @param userId 用户ID
+     */
+    void deleteAccount(Long userId);
+
+    /**
+     * 修改密码
+     * @param userId 用户ID
+     * @param request 修改密码请求（旧密码、新密码）
+     */
+    void changePassword(Long userId, ChangePasswordRequest request);
 }

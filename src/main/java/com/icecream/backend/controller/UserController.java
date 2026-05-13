@@ -3,6 +3,7 @@ package com.icecream.backend.controller;
 import com.github.pagehelper.Page;
 import com.icecream.backend.dto.ApiResponse;
 import com.icecream.backend.dto.PagedResult;
+import com.icecream.backend.dto.request.ChangePasswordRequest;
 import com.icecream.backend.dto.request.PrivacySettingsRequest;
 import com.icecream.backend.dto.request.UserUpdateRequest;
 import com.icecream.backend.dto.response.PrivacySettingsResponse;
@@ -164,6 +165,24 @@ public class UserController {
                 currentUserId, request.getFollowingVisibility(), request.getFollowerVisibility());
         PrivacySettingsResponse settings = userService.updatePrivacySettings(currentUserId, request);
         return ResponseEntity.ok(ApiResponse.success("更新成功", settings));
+    }
+
+    @DeleteMapping("/me")
+    @Operation(summary = "注销账号", description = "注销当前用户的账号（软删除，设置状态为禁用）")
+    public ResponseEntity<ApiResponse<Void>> deleteAccount() {
+        Long currentUserId = SecurityUtil.getCurrentUserId();
+        log.info("注销账号: userId={}", currentUserId);
+        userService.deleteAccount(currentUserId);
+        return ResponseEntity.ok(ApiResponse.success("账号已注销"));
+    }
+
+    @PutMapping("/me/password")
+    @Operation(summary = "修改密码", description = "修改当前用户的登录密码，需要提供旧密码和新密码")
+    public ResponseEntity<ApiResponse<Void>> changePassword(@Valid @RequestBody ChangePasswordRequest request) {
+        Long currentUserId = SecurityUtil.getCurrentUserId();
+        log.info("修改密码: userId={}", currentUserId);
+        userService.changePassword(currentUserId, request);
+        return ResponseEntity.ok(ApiResponse.success("密码修改成功"));
     }
 
 }

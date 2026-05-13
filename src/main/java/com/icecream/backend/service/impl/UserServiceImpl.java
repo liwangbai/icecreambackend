@@ -1,6 +1,7 @@
 package com.icecream.backend.service.impl;
 
 import com.icecream.backend.dto.FileUploadResponse;
+import com.icecream.backend.dto.request.ChangePasswordRequest;
 import com.icecream.backend.dto.request.PrivacySettingsRequest;
 import com.icecream.backend.dto.request.UserUpdateRequest;
 import com.icecream.backend.dto.response.PrivacySettingsResponse;
@@ -15,6 +16,7 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.cache.annotation.CacheEvict;
 import org.springframework.cache.annotation.Cacheable;
 import org.springframework.cache.annotation.Caching;
+import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.multipart.MultipartFile;
@@ -34,6 +36,7 @@ public class UserServiceImpl implements UserService {
 
     private final UserMapper userMapper;
     private final FileUploadService fileUploadService;
+    private final PasswordEncoder passwordEncoder;
 
     @Override
     public User getCurrentUser(Long userId) {
@@ -210,6 +213,56 @@ public class UserServiceImpl implements UserService {
 
         com.github.pagehelper.PageHelper.startPage(page, size);
         return userMapper.findFollowingWithMutualStatus(userId, currentUserId);
+    }
+
+    @Override
+    @Transactional
+    public void deleteAccount(Long userId) {
+        log.info("注销账号: userId={}", userId);
+
+        Optional<User> userOpt = userMapper.findById(userId);
+        if (!userOpt.isPresent()) {
+            throw new RuntimeException("用户不存在");
+        }
+
+        User user = userOpt.get();
+        if (user.getStatus() == 0) {
+            throw new RuntimeException("账号已注销");
+        }
+
+        user.setStatus(0);
+        userMapper.update(user);
+
+        log.info("账号注销成功: userId={}", userId);
+    }
+
+    @Override
+    @Transactional
+    public void changePassword(Long userId, ChangePasswordRequest request) {
+        log.info("修改密码: userId={}", userId);
+
+        Optional<User> userOpt = userMapper.findById(userId);
+        if (!userOpt.isPresent()) {
+            throw new RuntimeException("用户不存在");
+        }
+
+        User user = userOpt.get();
+
+        // 验证旧密码
+        if (!passwordEncoder.matches(request.getOldPassword(), user.getPasswordHash())) {
+            throw new RuntimeException("旧密码不正确");
+        }
+
+        // 新密码不能与旧密码相同
+        if (passwordEncoder.matches(request.getNewPassword(), user.getPasswordHash())) {
+            throw new RuntimeException("新密码不能与旧密码相同");
+        }
+
+        // 更新密码
+        user.setPasswordHash(passwordEncoder.encode(request.getNewPassword()));
+        userMapper.update(user);
+
+        log.info("密码修改成功: userId={}", userId);
     }
 
     @Override
