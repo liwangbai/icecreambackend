@@ -316,7 +316,12 @@
     <select id="findFollowersWithMutualStatus" resultMap="userInfoResponseMap">
         SELECT
             u.id, u.username, u.nickname, u.avatar_url, u.bio, u.gender,
-            u.follower_count, u.following_count, u.post_count, u.like_count,
+            COALESCE(u.follower_count, 0) AS follower_count,
+            COALESCE(u.following_count, 0) AS following_count,
+            COALESCE(u.post_count, 0) AS post_count,
+            COALESCE(u.like_count, 0) AS like_count,
+            COALESCE(u.collection_count, 0) AS collection_count,
+            COALESCE(u.history_count, 0) AS history_count,
             CASE WHEN #{currentUserId} IS NOT NULL AND EXISTS (
                 SELECT 1 FROM user_follows uf2
                 WHERE uf2.follower_id = #{currentUserId}
@@ -337,7 +342,12 @@
     <select id="findFollowingWithMutualStatus" resultMap="userInfoResponseMap">
         SELECT
             u.id, u.username, u.nickname, u.avatar_url, u.bio, u.gender,
-            u.follower_count, u.following_count, u.post_count, u.like_count,
+            COALESCE(u.follower_count, 0) AS follower_count,
+            COALESCE(u.following_count, 0) AS following_count,
+            COALESCE(u.post_count, 0) AS post_count,
+            COALESCE(u.like_count, 0) AS like_count,
+            COALESCE(u.collection_count, 0) AS collection_count,
+            COALESCE(u.history_count, 0) AS history_count,
             CASE WHEN #{currentUserId} IS NOT NULL AND EXISTS (
                 SELECT 1 FROM user_follows uf2
                 WHERE uf2.follower_id = #{currentUserId}
@@ -358,8 +368,12 @@
     <select id="findByIdWithFollowStatus" resultMap="userInfoResponseMap">
         SELECT
             u.id, u.username, u.nickname, u.avatar_url, u.bio, u.gender,
-            u.follower_count, u.following_count, u.post_count, u.like_count,
-            u.collection_count, u.history_count,
+            COALESCE(u.follower_count, 0) AS follower_count,
+            COALESCE(u.following_count, 0) AS following_count,
+            COALESCE(u.post_count, 0) AS post_count,
+            COALESCE(u.like_count, 0) AS like_count,
+            (SELECT COUNT(*) FROM post_favorites pf INNER JOIN posts p ON pf.post_id = p.id WHERE pf.user_id = u.id AND p.status = 1 AND p.visibility = 1) AS collection_count,
+            (SELECT COUNT(*) FROM user_browsing_history ubh INNER JOIN posts p ON ubh.post_id = p.id WHERE ubh.user_id = u.id AND p.status = 1 AND p.visibility = 1) AS history_count,
             (SELECT COALESCE(SUM(favorite_count), 0) FROM posts WHERE user_id = u.id) AS received_favorite_count,
             CASE WHEN #{currentUserId} IS NOT NULL AND EXISTS (
                 SELECT 1 FROM user_follows uf
@@ -379,7 +393,12 @@
     <select id="findByNickname" resultMap="userInfoResponseMap">
         SELECT
             u.id, u.username, u.nickname, u.avatar_url, u.bio, u.gender,
-            u.follower_count, u.following_count, u.post_count, u.like_count,
+            COALESCE(u.follower_count, 0) AS follower_count,
+            COALESCE(u.following_count, 0) AS following_count,
+            COALESCE(u.post_count, 0) AS post_count,
+            COALESCE(u.like_count, 0) AS like_count,
+            COALESCE(u.collection_count, 0) AS collection_count,
+            COALESCE(u.history_count, 0) AS history_count,
             CASE WHEN #{currentUserId} IS NOT NULL AND EXISTS (
                 SELECT 1 FROM user_follows uf
                 WHERE uf.follower_id = #{currentUserId}
