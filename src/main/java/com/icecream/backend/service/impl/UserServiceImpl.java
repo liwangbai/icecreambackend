@@ -1,0 +1,353 @@
+package com.icecream.backend.service.impl;
+
+import com.icecream.backend.dto.FileUploadResponse;
+import com.icecream.backend.dto.request.ChangePasswordRequest;
+import com.icecream.backend.dto.request.PrivacySettingsRequest;
+import com.icecream.backend.dto.request.UserUpdateRequest;
+import com.icecream.backend.dto.response.PrivacySettingsResponse;
+import com.icecream.backend.dto.response.UserInfoResponse;
+import com.icecream.backend.exception.ForbiddenException;
+import com.icecream.backend.mapper.UserMapper;
+import com.icecream.backend.model.User;
+import com.icecream.backend.service.FileUploadService;
+import com.icecream.backend.service.UserService;
+import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
+import org.springframework.cache.annotation.CacheEvict;
+import org.springframework.cache.annotation.Cacheable;
+import org.springframework.cache.annotation.Caching;
+import org.springframework.security.crypto.password.PasswordEncoder;
+import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
+import org.springframework.web.multipart.MultipartFile;
+
+import java.io.IOException;
+import java.time.LocalDateTime;
+import java.util.List;
+import java.util.Optional;
+
+/**
+ * 用户服务实现类
+ */
+@Slf4j
+@Service
+@RequiredArgsConstructor
+public class UserServiceImpl implements UserService {
+
+    private final UserMapper userMapper;
+    private final FileUploadService fileUploadService;
+    private final PasswordEncoder passwordEncoder;
+
+    @Override
+    public User getCurrentUser(Long userId) {
+        log.debug("获取当前用户信息: userId={}", userId);
+        Optional<User> userOpt = userMapper.findById(userId);
+        if (!userOpt.isPresent()) {
+            throw new RuntimeException("用户不存在: " + userId);
+        }
+        return userOpt.get();
+    }
+
+    @Override
+    @Cacheable(value = "users", key = "#userId")
+    public User getUserById(Long userId) {
+        log.debug("获取用户公开信息: userId={}", userId);
+        Optional<User> userOpt = userMapper.findById(userId);
+        if (!userOpt.isPresent()) {
+            throw new RuntimeException("用户不存在: " + userId);
+        }
+
+        User user = userOpt.get();
+        user.setPasswordHash(null);
+        return user;
+    }
+
+    @Override
+    public UserInfoResponse getUserProfile(Long userId, Long currentUserId) {
+        log.debug("获取用户公开信息（含关注状态）: userId={}, currentUserId={}", userId, currentUserId);
+        UserInfoResponse userInfo = userMapper.findByIdWithFollowStatus(userId, currentUserId);
+        if (userInfo == null) {
+            throw new RuntimeException("用户不存在: " + userId);
+        }
+        return userInfo;
+    }
+
+    @Override
+    @Transactional
+    @CacheEvict(value = "users", key = "#userId")
+    public User updateUser(Long userId, UserUpdateRequest request) {
+        log.info("更新用户信息: userId={}", userId);
+
+        Optional<User> userOpt = userMapper.findById(userId);
+        if (!userOpt.isPresent()) {
+            throw new RuntimeException("用户不存在: " + userId);
+        }
+
+        User user = userOpt.get();
+
+        // 更新允许修改的字段
+        if (request.getNickname() != null && !request.getNickname().equals(user.getNickname())) {
+            // 检查昵称是否已被其他用户使用
+            User nicknameUser = userMapper.findByNicknameExact(request.getNickname());
+            if (nicknameUser != null && !nicknameUser.getId().equals(userId)) {
+                throw new RuntimeException("昵称已被其他用户使用");
+            }
+            user.setNickname(request.getNickname());
+        }
+        if (request.getBio() != null) {
+            user.setBio(request.getBio());
+        }
+        if (request.getGender() != null) {
+            user.setGender(request.getGender());
+        }
+        if (request.getAvatarUrl() != null) {
+            user.setAvatarUrl(request.getAvatarUrl());
+        }
+        if (request.getEmail() != null && !request.getEmail().equals(user.getEmail())) {
+            // 检查邮箱是否已被其他用户使用
+            Optional<User> emailUserOpt = userMapper.findByEmail(request.getEmail());
+            if (emailUserOpt.isPresent() && !emailUserOpt.get().getId().equals(userId)) {
+                throw new RuntimeException("邮箱已被其他用户使用");
+            }
+            user.setEmail(request.getEmail());
+        }
+
+        // 更新数据库
+        userMapper.update(user);
+
+        return getUserById(userId);
+    }
+
+    @Override
+    @Transactional
+    @Caching(evict = {
+        @CacheEvict(value = "users", key = "#followerId"),
+        @CacheEvict(value = "users", key = "#followingId")
+    })
+    public void followUser(Long followerId, Long followingId) {
+        log.info("关注用户: followerId={}, followingId={}", followerId, followingId);
+
+        // 检查不能关注自己
+        if (followerId.equals(followingId)) {
+            throw new RuntimeException("不能关注自己");
+        }
+
+        // 检查用户是否存在
+        Optional<User> followerOpt = userMapper.findById(followerId);
+        Optional<User> followingOpt = userMapper.findById(followingId);
+        if (!followerOpt.isPresent() || !followingOpt.isPresent()) {
+            throw new RuntimeException("用户不存在");
+        }
+
+        // 检查是否已关注
+        if (userMapper.existsFollow(followerId, followingId)) {
+            throw new RuntimeException("已经关注了该用户");
+        }
+
+        // 添加关注关系
+        userMapper.insertFollow(followerId, followingId);
+
+        // 更新关注者和被关注者的统计信息
+        userMapper.incrementFollowingCount(followerId);  // 关注者的关注数+1
+        userMapper.incrementFollowerCount(followingId);  // 被关注者的粉丝数+1
+
+        log.info("关注成功: followerId={}, followingId={}", followerId, followingId);
+    }
+
+    @Override
+    @Transactional
+    @Caching(evict = {
+        @CacheEvict(value = "users", key = "#followerId"),
+        @CacheEvict(value = "users", key = "#followingId")
+    })
+    public void unfollowUser(Long followerId, Long followingId) {
+        log.info("取消关注: followerId={}, followingId={}", followerId, followingId);
+
+        // 检查关注关系是否存在
+        if (!userMapper.existsFollow(followerId, followingId)) {
+            throw new RuntimeException("尚未关注该用户");
+        }
+
+        // 删除关注关系
+        userMapper.deleteFollow(followerId, followingId);
+
+        // 更新关注者和被关注者的统计信息
+        userMapper.decrementFollowingCount(followerId);  // 关注者的关注数-1
+        userMapper.decrementFollowerCount(followingId);  // 被关注者的粉丝数-1
+
+        log.info("取消关注成功: followerId={}, followingId={}", followerId, followingId);
+    }
+
+    @Override
+    public boolean isFollowing(Long followerId, Long followingId) {
+        return userMapper.existsFollow(followerId, followingId);
+    }
+
+    @Override
+    public List<UserInfoResponse> getFollowers(Long userId, Long currentUserId, int page, int size) {
+        log.debug("获取粉丝列表: userId={}, currentUserId={}", userId, currentUserId);
+
+        // 检查隐私设置：非本人查看时，检查粉丝列表可见性
+        if (!userId.equals(currentUserId)) {
+            User targetUser = getTargetUserForPrivacyCheck(userId);
+            if (targetUser.getFollowerVisibility() != null && targetUser.getFollowerVisibility() == 0) {
+                throw new ForbiddenException("该用户设置了粉丝列表不可见");
+            }
+        }
+
+        com.github.pagehelper.PageHelper.startPage(page, size);
+        return userMapper.findFollowersWithMutualStatus(userId, currentUserId);
+    }
+
+    @Override
+    public List<UserInfoResponse> getFollowing(Long userId, Long currentUserId, int page, int size) {
+        log.debug("获取关注列表: userId={}, currentUserId={}", userId, currentUserId);
+
+        // 检查隐私设置：非本人查看时，检查关注列表可见性
+        if (!userId.equals(currentUserId)) {
+            User targetUser = getTargetUserForPrivacyCheck(userId);
+            if (targetUser.getFollowingVisibility() != null && targetUser.getFollowingVisibility() == 0) {
+                throw new ForbiddenException("该用户设置了关注列表不可见");
+            }
+        }
+
+        com.github.pagehelper.PageHelper.startPage(page, size);
+        return userMapper.findFollowingWithMutualStatus(userId, currentUserId);
+    }
+
+    @Override
+    @Transactional
+    public void deleteAccount(Long userId) {
+        log.info("注销账号: userId={}", userId);
+
+        Optional<User> userOpt = userMapper.findById(userId);
+        if (!userOpt.isPresent()) {
+            throw new RuntimeException("用户不存在");
+        }
+
+        User user = userOpt.get();
+        if (user.getStatus() == 0) {
+            throw new RuntimeException("账号已注销");
+        }
+
+        user.setStatus(0);
+        userMapper.update(user);
+
+        log.info("账号注销成功: userId={}", userId);
+    }
+
+    @Override
+    @Transactional
+    public void changePassword(Long userId, ChangePasswordRequest request) {
+        log.info("修改密码: userId={}", userId);
+
+        Optional<User> userOpt = userMapper.findById(userId);
+        if (!userOpt.isPresent()) {
+            throw new RuntimeException("用户不存在");
+        }
+
+        User user = userOpt.get();
+
+        // 验证旧密码
+        if (!passwordEncoder.matches(request.getOldPassword(), user.getPasswordHash())) {
+            throw new RuntimeException("旧密码不正确");
+        }
+
+        // 新密码不能与旧密码相同
+        if (passwordEncoder.matches(request.getNewPassword(), user.getPasswordHash())) {
+            throw new RuntimeException("新密码不能与旧密码相同");
+        }
+
+        // 更新密码
+        user.setPasswordHash(passwordEncoder.encode(request.getNewPassword()));
+        userMapper.update(user);
+
+        log.info("密码修改成功: userId={}", userId);
+    }
+
+    @Override
+    @Transactional
+    public void updateLastLogin(Long userId) {
+        log.debug("更新最后登录时间: userId={}", userId);
+        userMapper.updateLastLogin(userId);
+    }
+
+    @Override
+    public List<UserInfoResponse> searchByNickname(String keyword, Long currentUserId) {
+        log.debug("搜索用户: keyword={}, currentUserId={}", keyword, currentUserId);
+        return userMapper.findByNickname(keyword, currentUserId);
+    }
+
+    @Override
+    @Transactional
+    @CacheEvict(value = "users", key = "#userId")
+    public String updateAvatar(Long userId, MultipartFile file) {
+        log.info("更新用户头像: userId={}", userId);
+
+        // 检查用户是否存在
+        Optional<User> userOpt = userMapper.findById(userId);
+        if (!userOpt.isPresent()) {
+            throw new RuntimeException("用户不存在");
+        }
+
+        try {
+            // 上传头像文件
+            FileUploadResponse uploadResponse = fileUploadService.uploadFile(file, "avatars", userId, "用户头像");
+
+            // 更新用户头像URL
+            User user = userOpt.get();
+            user.setAvatarUrl(uploadResponse.getFileUrl());
+            userMapper.update(user);
+
+            log.info("头像更新成功: userId={}, avatarUrl={}", userId, uploadResponse.getFileUrl());
+            return uploadResponse.getFileUrl();
+        } catch (IOException e) {
+            log.error("头像上传失败: userId={}, error={}", userId, e.getMessage());
+            throw new RuntimeException("头像上传失败: " + e.getMessage());
+        }
+    }
+
+    @Override
+    public PrivacySettingsResponse getPrivacySettings(Long userId) {
+        log.debug("获取隐私设置: userId={}", userId);
+        User user = getTargetUserForPrivacyCheck(userId);
+        return PrivacySettingsResponse.builder()
+                .followingVisibility(user.getFollowingVisibility())
+                .followerVisibility(user.getFollowerVisibility())
+                .build();
+    }
+
+    @Override
+    @Transactional
+    public PrivacySettingsResponse updatePrivacySettings(Long userId, PrivacySettingsRequest request) {
+        log.info("更新隐私设置: userId={}, followingVisibility={}, followerVisibility={}",
+                userId, request.getFollowingVisibility(), request.getFollowerVisibility());
+
+        User user = getTargetUserForPrivacyCheck(userId);
+
+        if (request.getFollowingVisibility() != null) {
+            user.setFollowingVisibility(request.getFollowingVisibility());
+        }
+        if (request.getFollowerVisibility() != null) {
+            user.setFollowerVisibility(request.getFollowerVisibility());
+        }
+
+        userMapper.update(user);
+
+        return PrivacySettingsResponse.builder()
+                .followingVisibility(user.getFollowingVisibility())
+                .followerVisibility(user.getFollowerVisibility())
+                .build();
+    }
+
+    /**
+     * 获取目标用户信息用于隐私检查，避免重复查询
+     */
+    private User getTargetUserForPrivacyCheck(Long userId) {
+        Optional<User> userOpt = userMapper.findById(userId);
+        if (!userOpt.isPresent()) {
+            throw new RuntimeException("用户不存在: " + userId);
+        }
+        return userOpt.get();
+    }
+}

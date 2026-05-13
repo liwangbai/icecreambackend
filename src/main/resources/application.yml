@@ -1,0 +1,175 @@
+# 应用程序基础配置
+spring:
+  application:
+    name: icecreambackend
+
+  # 配置文件激活规则
+  profiles:
+    active: dev
+    group:
+      dev: dev
+      prod: prod
+      test: test
+
+  # Web服务器配置
+  servlet:
+    multipart:
+      max-file-size: 10MB
+      max-request-size: 10MB
+
+  # Redis缓存配置
+  cache:
+    type: redis
+    redis:
+      time-to-live: 60000
+      cache-null-values: false
+  data:
+    redis:
+      host: localhost
+      port: 6379
+      password:
+      timeout: 2000ms
+      lettuce:
+        pool:
+          max-active: 8
+          max-idle: 8
+          min-idle: 0
+
+# MyBatis配置
+mybatis:
+  # XML映射文件位置
+  mapper-locations: classpath:mapper/**/*.xml
+  # 实体类别名扫描包
+  type-aliases-package: com.icecream.backend.model
+  # 配置属性
+  configuration:
+    # 驼峰命名自动映射
+    map-underscore-to-camel-case: true
+    # 日志实现（开发环境可开启）
+    log-impl: org.apache.ibatis.logging.stdout.StdOutImpl
+  # 全局配置
+  global-config:
+    db-config:
+      # 主键类型：自增
+      id-type: auto
+
+# PageHelper分页插件配置
+pagehelper:
+  helper-dialect: mysql
+  reasonable: false
+  support-methods-arguments: true
+  params: count=countSql
+
+# 应用服务配置
+server:
+  port: 8080
+  servlet:
+    context-path: /
+    encoding:
+      charset: UTF-8
+      enabled: true
+
+# Spring Security配置（基础）
+security:
+  basic:
+    enabled: false
+
+# Actuator监控端点配置
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info,metrics,loggers
+      base-path: /actuator
+  endpoint:
+    health:
+      show-details: always
+      probes:
+        enabled: true
+
+# SpringDoc OpenAPI配置
+springdoc:
+  api-docs:
+    path: /v3/api-docs
+  swagger-ui:
+    path: /swagger-ui.html
+    operations-sorter: method
+    tags-sorter: alpha
+  packages-to-scan: com.icecream.backend.controller
+  default-consumes-media-type: application/json
+  default-produces-media-type: application/json
+
+# JWT配置
+jwt:
+  # JWT签名密钥，生产环境必须使用强密钥（至少256位）
+  secret: "icecream-backend-jwt-secret-key-for-development-only-change-in-production"
+  # 访问令牌过期时间（毫秒），7天
+  access-token-expiration: 604800000
+  # 刷新令牌过期时间（毫秒），30天
+  refresh-token-expiration: 2592000000
+  # 令牌发行者
+  issuer: "icecream-backend"
+
+# 日志配置
+logging:
+  level:
+    com.icecream.backend: DEBUG
+    org.springframework.web: INFO
+    org.springframework.security: DEBUG
+    org.mybatis: DEBUG
+  pattern:
+    console: "%d{yyyy-MM-dd HH:mm:ss} - %msg%n"
+    file: "%d{yyyy-MM-dd HH:mm:ss} [%thread] %-5level %logger{36} - %msg%n"
+  file:
+    name: logs/application.log
+
+# 文件上传配置
+file:
+  upload:
+    # 文件上传基础目录
+    base-dir: ./uploads
+    # 最大文件大小（字节），默认10MB
+    max-file-size: 10485760
+    # 允许的文件类型（MIME类型）
+    allowed-file-types:
+      - image/jpeg
+      - image/jpg
+      - image/png
+      - image/gif
+      - image/webp
+      - image/bmp
+      - image/svg+xml
+    # 允许的文件扩展名
+    allowed-extensions:
+      - jpg
+      - jpeg
+      - png
+      - gif
+      - webp
+      - bmp
+      - svg
+    # 是否启用文件类型验证
+    enable-file-type-validation: true
+    # 是否启用文件大小验证
+    enable-file-size-validation: true
+    # 是否生成唯一文件名
+    generate-unique-filename: true
+    # 文件访问URL前缀
+    url-prefix: /uploads
+    # 是否按用户分目录存储
+    organize-by-user: true
+    # 是否按文件类型分目录存储
+    organize-by-type: true
+    # 用户头像存储目录名
+    avatar-dir: avatars
+    # 帖子图片存储目录名
+    post-dir: posts
+    # 其他文件存储目录名
+    other-dir: others
+    # 是否启用文件MD5校验
+    enable-md5-check: false
+    # 是否覆盖同名文件
+    overwrite-existing: false
+    # 文件存储模式（local:本地存储，未来可扩展为oss:对象存储）
+    storage-mode: local
+

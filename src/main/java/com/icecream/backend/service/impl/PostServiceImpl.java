@@ -1,0 +1,610 @@
+package com.icecream.backend.service.impl;
+
+import com.icecream.backend.dto.HotTagDTO;
+import com.icecream.backend.dto.request.PostCreateRequest;
+import com.icecream.backend.dto.request.PostQueryRequest;
+import com.icecream.backend.dto.request.PostSearchRequest;
+import com.icecream.backend.dto.request.PostUpdateRequest;
+import com.icecream.backend.mapper.PostMapper;
+import com.icecream.backend.mapper.UserBrowsingHistoryMapper;
+import com.icecream.backend.mapper.UserMapper;
+import com.icecream.backend.model.Post;
+import com.icecream.backend.model.User;
+import com.icecream.backend.service.PostService;
+import com.github.pagehelper.PageHelper;
+import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
+import org.springframework.cache.CacheManager;
+import org.springframework.cache.annotation.CacheEvict;
+import org.springframework.cache.annotation.Cacheable;
+import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
+
+import java.time.LocalDateTime;
+import com.icecream.backend.exception.ResourceNotFoundException;
+import com.icecream.backend.exception.ForbiddenException;
+import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import java.util.*;
+import java.util.stream.Collectors;
+
+/**
+ * 帖子服务实现类
+ */
+@Slf4j
+@Service
+@RequiredArgsConstructor
+public class PostServiceImpl implements PostService {
+
+    private final PostMapper postMapper;
+    private final UserMapper userMapper;
+    private final UserBrowsingHistoryMapper userBrowsingHistoryMapper;
+    private final ObjectMapper objectMapper;
+    private final CacheManager cacheManager;
+
+    @Override
+    @Transactional
+    @CacheEvict(value = "hotTags", allEntries = true)
+    public Post createPost(Long userId, PostCreateRequest request) {
+        log.info("创建帖子: userId={}, content={}", userId, request.getContent());
+
+        // 创建帖子对象
+        Post post = new Post();
+        post.setUserId(userId);
+        post.setTitle(request.getTitle());
+        post.setContent(request.getContent());
+        post.setFaction(request.getFaction());
+        post.setRegion(request.getRegion());
+        post.setServer(request.getServer());
+        post.setBodyType(request.getBodyType());
+        post.setGameplay(request.getGameplay());
+        post.setTarget(request.getTarget());
+        post.setContactDetail(request.getContactDetail());
+        // 将图片列表转为JSON字符串存储
+        if (request.getImageUrls() != null && !request.getImageUrls().isEmpty()) {
+            try {
+                post.setImageUrls(objectMapper.writeValueAsString(request.getImageUrls()));
+            } catch (JsonProcessingException e) {
+                throw new RuntimeException("图片链接序列化失败");
+            }
+        }
+        // 将标签列表转为JSON字符串存储
+        if (request.getTags() != null && !request.getTags().isEmpty()) {
+            try {
+                post.setTags(objectMapper.writeValueAsString(request.getTags()));
+            } catch (JsonProcessingException e) {
+                throw new RuntimeException("标签序列化失败");
+            }
+        }
+        // 设置默认值
+        post.setStatus(1);
+        post.setVisibility(1);
+        post.setIsTop(false);
+        post.setViewCount(0);
+        post.setLikeCount(0);
+        post.setFavoriteCount(0);
+        post.setCommentCount(0);
+        post.setPublishedAt(LocalDateTime.now());
+
+        // 插入帖子
+        postMapper.insert(post);
+        log.info("帖子创建成功: postId={}", post.getId());
+
+        // 更新用户的发帖数
+        userMapper.incrementPostCount(userId);
+
+        // 返回创建的帖子
+        return getPostById(post.getId(), userId);
+    }
+
+    @Override
+    @Transactional
+    public Post getPostById(Long postId, Long currentUserId) {
+        log.debug("获取帖子详情: postId={}, currentUserId={}", postId, currentUserId);
+
+        // 查询帖子基础信息
+        Optional<Post> postOpt = postMapper.findById(postId);
+        if (!postOpt.isPresent()) {
+            throw new ResourceNotFoundException("帖子不存在");
+        }
+
+        Post post = postOpt.get();
+
+        // 增加浏览数
+        postMapper.incrementViewCount(postId);
+
+        // 记录用户浏览历史（已登录用户），仅首次浏览时增加历史条数
+        if (currentUserId != null) {
+            int result = userBrowsingHistoryMapper.insertOrUpdate(currentUserId, postId);
+            if (result == 1) {
+                userMapper.incrementHistoryCount(currentUserId);
+                cacheManager.getCache("users").evict(currentUserId);
+            }
+            // 清理超出上限的旧记录（保留最近200条）
+            userBrowsingHistoryMapper.deleteOldestByUserId(currentUserId, 200);
+        }
+
+        // 设置关联信息
+        enrichPostWithAssociations(post, currentUserId);
+
+        return post;
+    }
+
+    @Override
+    @Transactional
+    @CacheEvict(value = "hotTags", allEntries = true)
+    public Post updatePost(Long postId, Long userId, PostUpdateRequest request) {
+        log.info("更新帖子: postId={}, userId={}", postId, userId);
+
+        // 检查帖子是否存在且用户有权限
+        Optional<Post> postOpt = postMapper.findById(postId);
+        if (!postOpt.isPresent()) {
+            throw new ResourceNotFoundException("帖子不存在");
+        }
+
+        Post post = postOpt.get();
+        if (!post.getUserId().equals(userId)) {
+            throw new RuntimeException("没有权限更新此帖子");
+        }
+
+        // 更新帖子字段
+        if (request.getTitle() != null) {
+            post.setTitle(request.getTitle());
+        }
+        if (request.getContent() != null) {
+            post.setContent(request.getContent());
+        }
+        if (request.getFaction() != null) {
+            post.setFaction(request.getFaction());
+        }
+        if (request.getRegion() != null) {
+            post.setRegion(request.getRegion());
+        }
+        if (request.getServer() != null) {
+            post.setServer(request.getServer());
+        }
+        if (request.getBodyType() != null) {
+            post.setBodyType(request.getBodyType());
+        }
+        if (request.getGameplay() != null) {
+            post.setGameplay(request.getGameplay());
+        }
+        if (request.getTarget() != null) {
+            post.setTarget(request.getTarget());
+        }
+        if (request.getContactDetail() != null) {
+            post.setContactDetail(request.getContactDetail());
+        }
+        if (request.getImageUrls() != null) {
+            try {
+                post.setImageUrls(objectMapper.writeValueAsString(request.getImageUrls()));
+            } catch (JsonProcessingException e) {
+                throw new RuntimeException("图片链接序列化失败");
+            }
+        }
+        if (request.getTags() != null) {
+            try {
+                post.setTags(objectMapper.writeValueAsString(request.getTags()));
+            } catch (JsonProcessingException e) {
+                throw new RuntimeException("标签序列化失败");
+            }
+        }
+
+        // 更新数据库
+        postMapper.update(post);
+
+        return getPostById(postId, userId);
+    }
+
+    @Override
+    @Transactional
+    @CacheEvict(value = "hotTags", allEntries = true)
+    public void deletePost(Long postId, Long userId) {
+        log.info("删除帖子: postId={}, userId={}", postId, userId);
+
+        Optional<Post> postOpt = postMapper.findById(postId);
+        if (!postOpt.isPresent()) {
+            throw new ResourceNotFoundException("帖子不存在");
+        }
+
+        Post post = postOpt.get();
+        if (!post.getUserId().equals(userId)) {
+            throw new ForbiddenException("没有权限删除此帖子");
+        }
+
+        postMapper.delete(postId);
+        userMapper.decrementPostCount(userId);
+
+        log.info("帖子删除成功: postId={}", postId);
+    }
+
+    @Override
+    public List<Post> queryPosts(PostQueryRequest query) {
+        log.debug("查询帖子列表: {}", query);
+
+        // 设置分页
+        PageHelper.startPage(query.getPage() + 1, query.getSize());
+
+        // 执行查询
+        List<Post> posts = postMapper.findByCondition(query);
+
+        // SQL已通过postListResultMap返回作者和点赞/收藏/关注状态，此处仅解析JSON字段
+        for (Post post : posts) {
+            enrichPostMetadata(post);
+        }
+
+        return posts;
+    }
+
+    @Override
+    public long countPosts(PostQueryRequest query) {
+        return postMapper.countByCondition(query);
+    }
+
+    @Override
+    @Transactional
+    public void likePost(Long postId, Long userId) {
+        log.info("点赞帖子: postId={}, userId={}", postId, userId);
+
+        // 检查是否已点赞
+        if (postMapper.existsLike(userId, postId)) {
+            throw new RuntimeException("已经点赞过此帖子");
+        }
+
+        // 获取帖子作者
+        Post post = postMapper.findById(postId)
+                .orElseThrow(() -> new ResourceNotFoundException("帖子不存在"));
+
+        // 添加点赞记录
+        postMapper.insertLike(userId, postId);
+
+        // 增加帖子点赞数
+        postMapper.incrementLikeCount(postId);
+
+        // 增加帖子作者的获赞数
+        userMapper.incrementLikeCount(post.getUserId());
+        cacheManager.getCache("users").evict(post.getUserId());
+    }
+
+    @Override
+    @Transactional
+    public void unlikePost(Long postId, Long userId) {
+        log.info("取消点赞: postId={}, userId={}", postId, userId);
+
+        // 检查是否已点赞
+        if (!postMapper.existsLike(userId, postId)) {
+            throw new RuntimeException("尚未点赞此帖子");
+        }
+
+        // 获取帖子作者
+        Post post = postMapper.findById(postId)
+                .orElseThrow(() -> new ResourceNotFoundException("帖子不存在"));
+
+        // 删除点赞记录
+        postMapper.deleteLike(userId, postId);
+
+        // 减少帖子点赞数
+        postMapper.decrementLikeCount(postId);
+
+        // 减少帖子作者的获赞数
+        userMapper.decrementLikeCount(post.getUserId());
+        cacheManager.getCache("users").evict(post.getUserId());
+    }
+
+    @Override
+    public boolean isLiked(Long postId, Long userId) {
+        return postMapper.existsLike(userId, postId);
+    }
+
+    @Override
+    @Transactional
+    public void favoritePost(Long postId, Long userId) {
+        log.info("收藏帖子: postId={}, userId={}", postId, userId);
+
+        // 检查是否已收藏
+        if (postMapper.existsFavorite(userId, postId)) {
+            throw new RuntimeException("已经收藏过此帖子");
+        }
+
+        // 添加收藏记录
+        postMapper.insertFavorite(userId, postId);
+
+        // 增加帖子收藏数
+        postMapper.incrementFavoriteCount(postId);
+
+        // 增加用户的收藏数
+        userMapper.incrementCollectionCount(userId);
+        cacheManager.getCache("users").evict(userId);
+    }
+
+    @Override
+    @Transactional
+    public void unfavoritePost(Long postId, Long userId) {
+        log.info("取消收藏: postId={}, userId={}", postId, userId);
+
+        // 检查是否已收藏
+        if (!postMapper.existsFavorite(userId, postId)) {
+            throw new RuntimeException("尚未收藏此帖子");
+        }
+
+        // 删除收藏记录
+        postMapper.deleteFavorite(userId, postId);
+
+        // 减少帖子收藏数
+        postMapper.decrementFavoriteCount(postId);
+
+        // 减少用户的收藏数
+        userMapper.decrementCollectionCount(userId);
+        cacheManager.getCache("users").evict(userId);
+    }
+
+    @Override
+    public boolean isFavorited(Long postId, Long userId) {
+        return postMapper.existsFavorite(userId, postId);
+    }
+
+    @Override
+    public List<Post> getUserFavorites(Long userId, Long currentUserId) {
+        log.debug("查询用户收藏的帖子: userId={}, currentUserId={}", userId, currentUserId);
+
+        List<Post> posts = postMapper.findUserFavorites(userId, currentUserId);
+
+        for (Post post : posts) {
+            enrichPostMetadata(post);
+        }
+
+        return posts;
+    }
+
+    @Override
+    public long countUserFavorites(Long userId) {
+        return postMapper.countUserFavorites(userId);
+    }
+
+    @Override
+    public List<Post> getBrowsingHistory(Long userId) {
+        log.debug("查询用户浏览历史: userId={}", userId);
+
+        List<Post> posts = postMapper.findUserBrowsingHistory(userId);
+
+        for (Post post : posts) {
+            enrichPostMetadata(post);
+        }
+
+        return posts;
+    }
+
+    @Override
+    public long countBrowsingHistory(Long userId) {
+        return postMapper.countUserBrowsingHistory(userId);
+    }
+
+    @Override
+    @Transactional
+    public void clearBrowsingHistory(Long userId) {
+        log.info("清除用户浏览历史: userId={}", userId);
+
+        int deleted = userBrowsingHistoryMapper.deleteAllByUserId(userId);
+        log.info("已删除 {} 条浏览记录", deleted);
+
+        userMapper.resetHistoryCount(userId, 0);
+        cacheManager.getCache("users").evict(userId);
+    }
+
+    @Override
+    public List<Post> getUserPosts(Long userId, Integer status) {
+        log.debug("查询用户帖子: userId={}, status={}", userId, status);
+
+        List<Post> posts = postMapper.findByUserId(userId, status);
+
+        // 为每个帖子设置基本关联信息
+        for (Post post : posts) {
+            enrichPostWithBasicAssociations(post, userId);
+        }
+
+        return posts;
+    }
+
+    @Override
+    public List<Post> getFollowingPosts(Long userId) {
+        log.debug("查询关注用户帖子: userId={}", userId);
+
+        List<Post> posts = postMapper.findFollowingPosts(userId);
+
+        for (Post post : posts) {
+            enrichPostMetadata(post);
+        }
+
+        return posts;
+    }
+
+    @Override
+    public List<Post> getPostsByTagId(Long tagId) {
+        log.debug("根据标签查询帖子: tagId={}", tagId);
+
+        List<Post> posts = postMapper.findByTagId(tagId);
+
+        // 为每个帖子设置基本关联信息
+        for (Post post : posts) {
+            enrichPostWithBasicAssociations(post, null);
+        }
+
+        return posts;
+    }
+
+    @Override
+    @Cacheable(value = "hotTags", key = "#days + '-' + #limit")
+    public List<HotTagDTO> getHotTags(int days, int limit) {
+        log.debug("获取热门标签: days={}, limit={}", days, limit);
+
+        List<Post> posts = postMapper.findRecentPostsWithTags(days);
+
+        // 统计每个标签的出现次数
+        Map<String, Integer> tagCountMap = new HashMap<>();
+        for (Post post : posts) {
+            if (post.getTags() != null && !post.getTags().isEmpty()) {
+                try {
+                    List<String> tagList = objectMapper.readValue(post.getTags(),
+                        objectMapper.getTypeFactory().constructCollectionType(List.class, String.class));
+                    for (String tag : tagList) {
+                        if (tag != null && !tag.isBlank()) {
+                            tagCountMap.merge(tag, 1, Integer::sum);
+                        }
+                    }
+                } catch (JsonProcessingException e) {
+                    log.warn("解析标签失败: {}", post.getTags());
+                }
+            }
+        }
+
+        // 按出现次数降序排序，取前limit个
+        return tagCountMap.entrySet().stream()
+                .sorted(Map.Entry.<String, Integer>comparingByValue().reversed())
+                .limit(limit)
+                .map(entry -> HotTagDTO.builder()
+                        .tagName(entry.getKey())
+                        .count(entry.getValue())
+                        .build())
+                .collect(Collectors.toList());
+    }
+
+    @Override
+    public List<Post> getPostsByTagName(String tagName, Long currentUserId) {
+        log.debug("根据标签名查询帖子: tagName={}", tagName);
+
+        List<Post> posts = postMapper.findByTagName(tagName, currentUserId);
+
+        for (Post post : posts) {
+            enrichPostMetadata(post);
+        }
+
+        return posts;
+    }
+
+    @Override
+    public long countPostsByTagName(String tagName) {
+        return postMapper.countByTagName(tagName);
+    }
+
+    @Override
+    public List<Post> searchPosts(PostSearchRequest query) {
+        log.debug("关键词搜索帖子: keyword={}, page={}, size={}", query.getKeyword(), query.getPage(), query.getSize());
+
+        PageHelper.startPage(query.getPage() + 1, query.getSize());
+        List<Post> posts = postMapper.searchByKeyword(query);
+
+        for (Post post : posts) {
+            enrichPostMetadata(post);
+        }
+
+        return posts;
+    }
+
+    @Override
+    public long countSearchResults(PostSearchRequest query) {
+        return postMapper.countByKeyword(query);
+    }
+
+    // ========== 私有方法 ==========
+
+    /**
+     * 仅解析帖子的JSON字段（imageUrls、tags），不访问数据库
+     * 适用于SQL已通过postListResultMap返回作者和点赞/收藏/关注状态的场景
+     */
+    private void enrichPostMetadata(Post post) {
+        if (post.getImageUrls() != null && !post.getImageUrls().isEmpty()) {
+            try {
+                post.setImageUrlList(objectMapper.readValue(post.getImageUrls(),
+                    objectMapper.getTypeFactory().constructCollectionType(List.class, String.class)));
+            } catch (JsonProcessingException e) {
+                log.warn("解析图片链接失败: {}", post.getImageUrls());
+            }
+        }
+
+        if (post.getTags() != null && !post.getTags().isEmpty()) {
+            try {
+                post.setTagList(objectMapper.readValue(post.getTags(),
+                    objectMapper.getTypeFactory().constructCollectionType(List.class, String.class)));
+            } catch (JsonProcessingException e) {
+                log.warn("解析标签失败: {}", post.getTags());
+            }
+        }
+    }
+
+    /**
+     * 丰富帖子信息（包含作者、标签等关联信息）
+     */
+    private void enrichPostWithAssociations(Post post, Long currentUserId) {
+        // 设置作者信息
+        Optional<User> userOpt = userMapper.findById(post.getUserId());
+        userOpt.ifPresent(post::setAuthor);
+
+        // 将imageUrls从JSON字符串转为List
+        if (post.getImageUrls() != null && !post.getImageUrls().isEmpty()) {
+            try {
+                post.setImageUrlList(objectMapper.readValue(post.getImageUrls(),
+                    objectMapper.getTypeFactory().constructCollectionType(List.class, String.class)));
+            } catch (JsonProcessingException e) {
+                log.warn("解析图片链接失败: {}", post.getImageUrls());
+            }
+        }
+
+        // 将tags从JSON字符串转为List
+        if (post.getTags() != null && !post.getTags().isEmpty()) {
+            try {
+                post.setTagList(objectMapper.readValue(post.getTags(),
+                    objectMapper.getTypeFactory().constructCollectionType(List.class, String.class)));
+            } catch (JsonProcessingException e) {
+                log.warn("解析标签失败: {}", post.getTags());
+            }
+        }
+
+        // 设置是否点赞、收藏、关注
+        if (currentUserId != null) {
+            post.setLiked(postMapper.existsLike(currentUserId, post.getId()));
+            post.setFavorited(postMapper.existsFavorite(currentUserId, post.getId()));
+            post.setFollowed(userMapper.existsFollow(currentUserId, post.getUserId()));
+            post.setFollowMe(userMapper.existsFollow(post.getUserId(), currentUserId));
+        } else {
+            post.setLiked(false);
+            post.setFavorited(false);
+            post.setFollowed(false);
+            post.setFollowMe(false);
+        }
+    }
+
+    /**
+     * 丰富帖子基本信息（仅包含作者基本信息）
+     */
+    private void enrichPostWithBasicAssociations(Post post, Long currentUserId) {
+        // 设置作者基本信息
+        Optional<User> userOpt = userMapper.findById(post.getUserId());
+        if (userOpt.isPresent()) {
+            User author = new User();
+            author.setId(userOpt.get().getId());
+            author.setUsername(userOpt.get().getUsername());
+            author.setNickname(userOpt.get().getNickname());
+            author.setAvatarUrl(userOpt.get().getAvatarUrl());
+            post.setAuthor(author);
+        }
+
+        // 将tags从JSON字符串转为List
+        if (post.getTags() != null && !post.getTags().isEmpty()) {
+            try {
+                post.setTagList(objectMapper.readValue(post.getTags(),
+                    objectMapper.getTypeFactory().constructCollectionType(List.class, String.class)));
+            } catch (JsonProcessingException e) {
+                log.warn("解析标签失败: {}", post.getTags());
+            }
+        }
+
+        // 设置是否点赞和收藏
+        if (currentUserId != null) {
+            post.setLiked(postMapper.existsLike(currentUserId, post.getId()));
+            post.setFavorited(postMapper.existsFavorite(currentUserId, post.getId()));
+        } else {
+            post.setLiked(false);
+            post.setFavorited(false);
+        }
+    }
+}

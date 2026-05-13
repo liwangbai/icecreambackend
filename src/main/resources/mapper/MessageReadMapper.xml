@@ -1,0 +1,57 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.icecream.backend.mapper.MessageReadMapper">
+
+    <!-- 结果映射 -->
+    <resultMap id="messageReadResultMap" type="com.icecream.backend.model.MessageRead">
+        <id property="id" column="id"/>
+        <result property="conversationId" column="conversation_id"/>
+        <result property="userId" column="user_id"/>
+        <result property="lastReadMessageId" column="last_read_message_id"/>
+        <result property="lastReadAt" column="last_read_at"/>
+    </resultMap>
+
+    <!-- 查询用户在某会话中的已读状态 -->
+    <select id="findByConversationAndUser" resultMap="messageReadResultMap">
+        SELECT id, conversation_id, user_id, last_read_message_id, last_read_at
+        FROM message_reads
+        WHERE conversation_id = #{conversationId} AND user_id = #{userId}
+    </select>
+
+    <!-- 插入或更新已读状态 -->
+    <insert id="insertOrUpdate" parameterType="com.icecream.backend.model.MessageRead">
+        INSERT INTO message_reads (conversation_id, user_id, last_read_message_id, last_read_at)
+        VALUES (#{conversationId}, #{userId}, #{lastReadMessageId}, #{lastReadAt})
+        ON DUPLICATE KEY UPDATE
+            last_read_message_id = #{lastReadMessageId},
+            last_read_at = #{lastReadAt}
+    </insert>
+
+    <!-- 更新已读消息ID -->
+    <update id="updateLastRead">
+        INSERT INTO message_reads (conversation_id, user_id, last_read_message_id, last_read_at)
+        VALUES (#{conversationId}, #{userId}, #{lastReadMessageId}, NOW())
+        ON DUPLICATE KEY UPDATE
+            last_read_message_id = #{lastReadMessageId},
+            last_read_at = NOW()
+    </update>
+
+    <!-- 批量查询多个会话的未读消息数 -->
+    <select id="countUnreadBatch" resultType="java.util.HashMap">
+        SELECT
+            c.id as conversation_id,
+            COUNT(m.id) as unread_count
+        FROM conversations c
+        LEFT JOIN message_reads mr ON mr.conversation_id = c.id AND mr.user_id = #{userId}
+        LEFT JOIN messages m ON m.conversation_id = c.id
+            AND m.sender_id != #{userId}
+            AND m.status = 1
+            AND m.id > COALESCE(mr.last_read_message_id, 0)
+        WHERE c.id IN
+        <foreach collection="conversationIds" item="convId" open="(" separator="," close=")">
+            #{convId}
+        </foreach>
+        GROUP BY c.id
+    </select>
+
+</mapper>

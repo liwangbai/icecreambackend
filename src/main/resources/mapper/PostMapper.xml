@@ -1,0 +1,812 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.icecream.backend.mapper.PostMapper">
+
+    <!-- ========== 结果映射定义 ========== -->
+
+    <!-- 基础帖子结果映射，包含帖子基本字段 -->
+    <resultMap id="postResultMap" type="com.icecream.backend.model.Post">
+        <id property="id" column="id"/>
+        <result property="userId" column="user_id"/>
+        <result property="title" column="title"/>
+        <result property="content" column="content"/>
+        <result property="summary" column="summary"/>
+        <result property="coverImageUrl" column="cover_image_url"/>
+        <result property="viewCount" column="view_count"/>
+        <result property="likeCount" column="like_count"/>
+        <result property="favoriteCount" column="favorite_count"/>
+        <result property="commentCount" column="comment_count"/>
+        <result property="status" column="status"/>
+        <result property="visibility" column="visibility"/>
+        <result property="isTop" column="is_top"/>
+        <result property="publishedAt" column="published_at"/>
+        <result property="createdAt" column="created_at"/>
+        <result property="updatedAt" column="updated_at"/>
+        <result property="faction" column="faction"/>
+        <result property="region" column="region"/>
+        <result property="server" column="server"/>
+        <result property="bodyType" column="body_type"/>
+        <result property="gameplay" column="gameplay"/>
+        <result property="target" column="target"/>
+        <result property="contactDetail" column="contact_detail"/>
+        <result property="imageUrls" column="image_urls"/>
+        <result property="tags" column="tags"/>
+    </resultMap>
+
+    <!-- 帖子详情结果映射，包含作者信息 -->
+    <resultMap id="postDetailResultMap" type="com.icecream.backend.model.Post" extends="postResultMap">
+        <!-- 关联作者信息 -->
+        <association property="author" javaType="com.icecream.backend.model.User">
+            <id property="id" column="author_id"/>
+            <result property="username" column="author_username"/>
+            <result property="nickname" column="author_nickname"/>
+            <result property="avatarUrl" column="author_avatar_url"/>
+            <result property="bio" column="author_bio"/>
+            <result property="postCount" column="author_post_count"/>
+            <result property="followerCount" column="author_follower_count"/>
+            <result property="followingCount" column="author_following_count"/>
+        </association>
+        <!-- 标签信息通过单独的查询加载 -->
+    </resultMap>
+
+    <!-- 帖子列表结果映射，包含作者基本信息和是否点赞 -->
+    <resultMap id="postListResultMap" type="com.icecream.backend.model.Post">
+        <id property="id" column="id"/>
+        <result property="userId" column="user_id"/>
+        <result property="title" column="title"/>
+        <result property="content" column="content"/>
+        <result property="summary" column="summary"/>
+        <result property="coverImageUrl" column="cover_image_url"/>
+        <result property="viewCount" column="view_count"/>
+        <result property="likeCount" column="like_count"/>
+        <result property="favoriteCount" column="favorite_count"/>
+        <result property="commentCount" column="comment_count"/>
+        <result property="status" column="status"/>
+        <result property="visibility" column="visibility"/>
+        <result property="isTop" column="is_top"/>
+        <result property="publishedAt" column="published_at"/>
+        <result property="createdAt" column="created_at"/>
+        <result property="updatedAt" column="updated_at"/>
+        <result property="faction" column="faction"/>
+        <result property="region" column="region"/>
+        <result property="server" column="server"/>
+        <result property="bodyType" column="body_type"/>
+        <result property="gameplay" column="gameplay"/>
+        <result property="target" column="target"/>
+        <result property="contactDetail" column="contact_detail"/>
+        <result property="imageUrls" column="image_urls"/>
+        <result property="tags" column="tags"/>
+        <result property="liked" column="liked"/>
+        <result property="favorited" column="favorited"/>
+        <result property="followed" column="followed"/>
+        <result property="followMe" column="follow_me"/>
+        <association property="author" javaType="com.icecream.backend.model.User">
+            <id property="id" column="author_id"/>
+            <result property="username" column="author_username"/>
+            <result property="nickname" column="author_nickname"/>
+            <result property="avatarUrl" column="author_avatar_url"/>
+        </association>
+    </resultMap>
+
+    <!-- ========== 基本CRUD操作 ========== -->
+
+    <!-- 根据ID查询帖子（基础信息） -->
+    <select id="findById" resultMap="postResultMap">
+        SELECT * FROM posts
+        WHERE id = #{id}
+    </select>
+
+    <!-- 查询所有帖子（仅管理员使用） -->
+    <select id="findAll" resultMap="postResultMap">
+        SELECT * FROM posts
+        ORDER BY id ASC
+    </select>
+
+    <!-- 插入新帖子 -->
+    <insert id="insert" parameterType="com.icecream.backend.model.Post" useGeneratedKeys="true" keyProperty="id">
+        INSERT INTO posts (
+            user_id, title, content, summary, cover_image_url,
+            view_count, like_count, favorite_count, comment_count, status, visibility, is_top, published_at,
+            faction, region, server, body_type, gameplay, target, contact_detail, image_urls, tags
+        ) VALUES (
+            #{userId}, #{title}, #{content}, #{summary}, #{coverImageUrl},
+            #{viewCount}, #{likeCount}, #{favoriteCount}, #{commentCount}, #{status}, #{visibility}, #{isTop}, #{publishedAt},
+            #{faction}, #{region}, #{server}, #{bodyType}, #{gameplay}, #{target}, #{contactDetail}, #{imageUrls}, #{tags}
+        )
+    </insert>
+
+    <!-- 更新帖子信息 -->
+    <update id="update" parameterType="com.icecream.backend.model.Post">
+        UPDATE posts
+        <set>
+            <if test="title != null">title = #{title},</if>
+            <if test="content != null">content = #{content},</if>
+            <if test="summary != null">summary = #{summary},</if>
+            <if test="coverImageUrl != null">cover_image_url = #{coverImageUrl},</if>
+            <if test="viewCount != null">view_count = #{viewCount},</if>
+            <if test="likeCount != null">like_count = #{likeCount},</if>
+            <if test="favoriteCount != null">favorite_count = #{favoriteCount},</if>
+            <if test="commentCount != null">comment_count = #{commentCount},</if>
+            <if test="status != null">status = #{status},</if>
+            <if test="visibility != null">visibility = #{visibility},</if>
+            <if test="isTop != null">is_top = #{isTop},</if>
+            <if test="publishedAt != null">published_at = #{publishedAt},</if>
+            <if test="faction != null">faction = #{faction},</if>
+            <if test="region != null">region = #{region},</if>
+            <if test="server != null">server = #{server},</if>
+            <if test="bodyType != null">body_type = #{bodyType},</if>
+            <if test="gameplay != null">gameplay = #{gameplay},</if>
+            <if test="target != null">target = #{target},</if>
+            <if test="contactDetail != null">contact_detail = #{contactDetail},</if>
+            <if test="imageUrls != null">image_urls = #{imageUrls},</if>
+            <if test="tags != null">tags = #{tags},</if>
+            updated_at = NOW()
+        </set>
+        WHERE id = #{id}
+    </update>
+
+    <!-- 根据ID删除帖子 -->
+    <delete id="delete">
+        DELETE FROM posts
+        WHERE id = #{id}
+    </delete>
+
+    <!-- ========== 条件查询（基础查询） ========== -->
+
+    <select id="findByCondition" parameterType="com.icecream.backend.dto.request.PostQueryRequest" resultMap="postListResultMap">
+        SELECT
+            p.id, p.user_id, p.title, p.content, p.summary, p.cover_image_url,
+            p.view_count, p.like_count, p.favorite_count, p.comment_count, p.status, p.visibility,
+            p.is_top, p.published_at, p.created_at, p.updated_at,
+            p.faction, p.region, p.server, p.body_type, p.gameplay,
+            p.target, p.contact_detail, p.image_urls, p.tags,
+            u.id as author_id,
+            u.username as author_username,
+            u.nickname as author_nickname,
+            u.avatar_url as author_avatar_url,
+            CASE WHEN EXISTS (
+                SELECT 1 FROM post_likes pl
+                WHERE pl.post_id = p.id AND pl.user_id = #{query.currentUserId}
+            ) THEN TRUE ELSE FALSE END as liked,
+            CASE WHEN EXISTS (
+                SELECT 1 FROM post_favorites pf
+                WHERE pf.post_id = p.id AND pf.user_id = #{query.currentUserId}
+            ) THEN TRUE ELSE FALSE END as favorited,
+            CASE WHEN EXISTS (
+                SELECT 1 FROM user_follows uf
+                WHERE uf.follower_id = #{query.currentUserId} AND uf.following_id = p.user_id
+            ) THEN TRUE ELSE FALSE END as followed,
+            CASE WHEN EXISTS (
+                SELECT 1 FROM user_follows uf
+                WHERE uf.follower_id = p.user_id AND uf.following_id = #{query.currentUserId}
+            ) THEN TRUE ELSE FALSE END as follow_me
+        FROM posts p
+        INNER JOIN users u ON p.user_id = u.id
+        <where>
+            <if test="query.status != null">
+                AND p.status = #{query.status}
+            </if>
+            <if test="query.visibility != null">
+                AND p.visibility = #{query.visibility}
+            </if>
+            <if test="query.userId != null">
+                AND p.user_id = #{query.userId}
+            </if>
+            <if test="query.faction != null and query.faction != ''">
+                AND p.faction = #{query.faction}
+            </if>
+            <if test="query.region != null and query.region != ''">
+                AND p.region = #{query.region}
+            </if>
+            <if test="query.server != null and query.server != ''">
+                AND p.server = #{query.server}
+            </if>
+            <if test="query.bodyType != null and query.bodyType != ''">
+                AND p.body_type = #{query.bodyType}
+            </if>
+            <if test="query.gameplay != null and query.gameplay != ''">
+                AND p.gameplay = #{query.gameplay}
+            </if>
+            <if test="query.tag != null and query.tag != ''">
+                AND JSON_CONTAINS(p.tags, CONCAT('"', #{query.tag}, '"'))
+            </if>
+        </where>
+        <choose>
+            <when test="query.sortBy == 'hot'">
+                ORDER BY (p.like_count * 3 + p.comment_count * 2 + p.view_count * 0.1 + 1)
+                    * EXP(-TIMESTAMPDIFF(HOUR, p.published_at, NOW()) / 72.0) DESC
+            </when>
+            <when test="query.sortBy == 'viewCount'">
+                ORDER BY p.view_count ${query.sortDirection}
+            </when>
+            <when test="query.sortBy == 'likeCount'">
+                ORDER BY p.like_count ${query.sortDirection}
+            </when>
+            <when test="query.sortBy == 'publishedAt' or query.sortBy == null">
+                ORDER BY p.published_at ${query.sortDirection}
+            </when>
+            <otherwise>
+                ORDER BY p.published_at DESC
+            </otherwise>
+        </choose>
+    </select>
+
+    <!-- 根据条件统计帖子数量 -->
+    <select id="countByCondition" parameterType="com.icecream.backend.dto.request.PostQueryRequest" resultType="long">
+        SELECT COUNT(*)
+        FROM posts p
+        <where>
+            <if test="query.status != null">
+                AND p.status = #{query.status}
+            </if>
+            <if test="query.visibility != null">
+                AND p.visibility = #{query.visibility}
+            </if>
+            <if test="query.userId != null">
+                AND p.user_id = #{query.userId}
+            </if>
+            <if test="query.faction != null and query.faction != ''">
+                AND p.faction = #{query.faction}
+            </if>
+            <if test="query.region != null and query.region != ''">
+                AND p.region = #{query.region}
+            </if>
+            <if test="query.server != null and query.server != ''">
+                AND p.server = #{query.server}
+            </if>
+            <if test="query.bodyType != null and query.bodyType != ''">
+                AND p.body_type = #{query.bodyType}
+            </if>
+            <if test="query.gameplay != null and query.gameplay != ''">
+                AND p.gameplay = #{query.gameplay}
+            </if>
+            <if test="query.tag != null and query.tag != ''">
+                AND JSON_CONTAINS(p.tags, CONCAT('"', #{query.tag}, '"'))
+            </if>
+        </where>
+    </select>
+
+    <!-- ========== 业务方法 ========== -->
+
+    <!-- 增加帖子浏览数 -->
+    <update id="incrementViewCount">
+        UPDATE posts
+        SET view_count = view_count + 1,
+            updated_at = NOW()
+        WHERE id = #{postId}
+    </update>
+
+    <!-- 增加帖子点赞数 -->
+    <update id="incrementLikeCount">
+        UPDATE posts
+        SET like_count = like_count + 1,
+            updated_at = NOW()
+        WHERE id = #{postId}
+    </update>
+
+    <!-- 增加帖子评论数 -->
+    <update id="incrementCommentCount">
+        UPDATE posts
+        SET comment_count = comment_count + 1,
+            updated_at = NOW()
+        WHERE id = #{postId}
+    </update>
+
+    <!-- 减少帖子点赞数 -->
+    <update id="decrementLikeCount">
+        UPDATE posts
+        SET like_count = GREATEST(like_count - 1, 0),
+            updated_at = NOW()
+        WHERE id = #{postId}
+    </update>
+
+    <!-- 减少帖子评论数 -->
+    <update id="decrementCommentCount">
+        UPDATE posts
+        SET comment_count = GREATEST(comment_count - 1, 0),
+            updated_at = NOW()
+        WHERE id = #{postId}
+    </update>
+
+    <!-- ========== 用户相关查询 ========== -->
+
+    <!-- 根据用户ID查询帖子 -->
+    <select id="findByUserId" resultMap="postResultMap">
+        SELECT * FROM posts
+        WHERE user_id = #{userId}
+        <if test="status != null">
+            AND status = #{status}
+        </if>
+        ORDER BY published_at DESC
+    </select>
+
+    <!-- 查询用户关注的用户的帖子（时间线） -->
+    <select id="findFollowingPosts" resultMap="postListResultMap">
+        SELECT
+            p.*,
+            u.id as author_id,
+            u.username as author_username,
+            u.nickname as author_nickname,
+            u.avatar_url as author_avatar_url,
+            <!-- 判断当前用户是否点赞和收藏 -->
+            <if test="userId != null">
+                CASE WHEN EXISTS (
+                    SELECT 1 FROM post_likes pl
+                    WHERE pl.post_id = p.id AND pl.user_id = #{userId}
+                ) THEN TRUE ELSE FALSE END as liked,
+                CASE WHEN EXISTS (
+                    SELECT 1 FROM post_favorites pf
+                    WHERE pf.post_id = p.id AND pf.user_id = #{userId}
+                ) THEN TRUE ELSE FALSE END as favorited
+            </if>
+            <if test="userId == null">
+                FALSE as liked,
+                FALSE as favorited
+            </if>
+        FROM posts p
+        INNER JOIN users u ON p.user_id = u.id
+        INNER JOIN user_follows uf ON u.id = uf.following_id
+        WHERE uf.follower_id = #{userId}
+          AND p.status = 1  <!-- 只查询已发布的帖子 -->
+          AND p.visibility = 1  <!-- 只查询公开的帖子 -->
+        ORDER BY p.published_at DESC
+    </select>
+
+    <!-- ========== 标签相关查询 ========== -->
+
+    <!-- 根据标签ID查询帖子 -->
+    <select id="findByTagId" resultMap="postListResultMap">
+        SELECT
+            p.*,
+            u.id as author_id,
+            u.username as author_username,
+            u.nickname as author_nickname,
+            u.avatar_url as author_avatar_url,
+            FALSE as liked  <!-- 标签查询默认不包含点赞信息 -->
+        FROM posts p
+        INNER JOIN users u ON p.user_id = u.id
+        INNER JOIN post_tags pt ON p.id = pt.post_id
+        WHERE pt.tag_id = #{tagId}
+          AND p.status = 1  <!-- 只查询已发布的帖子 -->
+          AND p.visibility = 1  <!-- 只查询公开的帖子 -->
+        ORDER BY p.published_at DESC
+    </select>
+
+    <!-- 查询最近有标签的帖子（用于统计热门标签） -->
+    <select id="findRecentPostsWithTags" resultMap="postResultMap">
+        SELECT id, tags FROM posts
+        WHERE status = 1
+          AND published_at >= DATE_SUB(NOW(), INTERVAL #{days} DAY)
+          AND tags IS NOT NULL
+          AND tags != '[]'
+        LIMIT 2000
+    </select>
+
+    <!-- 根据标签名精确查询帖子（JSON_CONTAINS匹配） -->
+    <select id="findByTagName" resultMap="postListResultMap">
+        SELECT
+            p.id, p.user_id, p.title, p.content, p.summary, p.cover_image_url,
+            p.view_count, p.like_count, p.favorite_count, p.comment_count, p.status, p.visibility,
+            p.is_top, p.published_at, p.created_at, p.updated_at,
+            p.faction, p.region, p.server, p.body_type, p.gameplay,
+            p.target, p.contact_detail, p.image_urls, p.tags,
+            u.id as author_id,
+            u.username as author_username,
+            u.nickname as author_nickname,
+            u.avatar_url as author_avatar_url,
+            <if test="currentUserId != null">
+                CASE WHEN EXISTS (
+                    SELECT 1 FROM post_likes pl
+                    WHERE pl.post_id = p.id AND pl.user_id = #{currentUserId}
+                ) THEN TRUE ELSE FALSE END as liked,
+                CASE WHEN EXISTS (
+                    SELECT 1 FROM post_favorites pf
+                    WHERE pf.post_id = p.id AND pf.user_id = #{currentUserId}
+                ) THEN TRUE ELSE FALSE END as favorited,
+                CASE WHEN EXISTS (
+                    SELECT 1 FROM user_follows uf
+                    WHERE uf.follower_id = #{currentUserId} AND uf.following_id = p.user_id
+                ) THEN TRUE ELSE FALSE END as followed,
+                CASE WHEN EXISTS (
+                    SELECT 1 FROM user_follows uf
+                    WHERE uf.follower_id = p.user_id AND uf.following_id = #{currentUserId}
+                ) THEN TRUE ELSE FALSE END as follow_me
+            </if>
+            <if test="currentUserId == null">
+                FALSE as liked,
+                FALSE as favorited,
+                FALSE as followed,
+                FALSE as follow_me
+            </if>
+        FROM posts p
+        INNER JOIN users u ON p.user_id = u.id
+        WHERE p.status = 1
+          AND p.visibility = 1
+          AND JSON_CONTAINS(p.tags, CONCAT('"', #{tagName}, '"'))
+        ORDER BY p.published_at DESC
+    </select>
+
+    <!-- 根据标签名统计帖子数量 -->
+    <select id="countByTagName" resultType="long">
+        SELECT COUNT(*)
+        FROM posts p
+        WHERE p.status = 1
+          AND p.visibility = 1
+          AND JSON_CONTAINS(p.tags, CONCAT('"', #{tagName}, '"'))
+    </select>
+
+    <!-- ========== 点赞相关查询 ========== -->
+
+    <!-- 检查用户是否点赞了帖子 -->
+    <select id="existsLike" resultType="boolean">
+        SELECT COUNT(*) > 0
+        FROM post_likes
+        WHERE user_id = #{userId}
+          AND post_id = #{postId}
+    </select>
+
+    <!-- 添加点赞记录 -->
+    <insert id="insertLike">
+        INSERT IGNORE INTO post_likes (user_id, post_id)
+        VALUES (#{userId}, #{postId})
+    </insert>
+
+    <!-- 删除点赞记录 -->
+    <delete id="deleteLike">
+        DELETE FROM post_likes
+        WHERE user_id = #{userId}
+          AND post_id = #{postId}
+    </delete>
+
+    <!-- ========== 收藏相关操作 ========== -->
+
+    <!-- 检查用户是否收藏了帖子 -->
+    <select id="existsFavorite" resultType="boolean">
+        SELECT COUNT(*) > 0
+        FROM post_favorites
+        WHERE user_id = #{userId}
+          AND post_id = #{postId}
+    </select>
+
+    <!-- 添加收藏记录 -->
+    <insert id="insertFavorite">
+        INSERT IGNORE INTO post_favorites (user_id, post_id)
+        VALUES (#{userId}, #{postId})
+    </insert>
+
+    <!-- 删除收藏记录 -->
+    <delete id="deleteFavorite">
+        DELETE FROM post_favorites
+        WHERE user_id = #{userId}
+          AND post_id = #{postId}
+    </delete>
+
+    <!-- 增加帖子收藏数 -->
+    <update id="incrementFavoriteCount">
+        UPDATE posts
+        SET favorite_count = favorite_count + 1,
+            updated_at = NOW()
+        WHERE id = #{postId}
+    </update>
+
+    <!-- 减少帖子收藏数 -->
+    <update id="decrementFavoriteCount">
+        UPDATE posts
+        SET favorite_count = GREATEST(favorite_count - 1, 0),
+            updated_at = NOW()
+        WHERE id = #{postId}
+    </update>
+
+    <!-- 查询用户收藏的帖子 -->
+    <select id="findUserFavorites" resultMap="postListResultMap">
+        SELECT
+            p.id, p.user_id, p.title, p.content, p.summary, p.cover_image_url,
+            p.view_count, p.like_count, p.favorite_count, p.comment_count, p.status, p.visibility,
+            p.is_top, p.published_at, p.created_at, p.updated_at,
+            p.faction, p.region, p.server, p.body_type, p.gameplay,
+            p.target, p.contact_detail, p.image_urls, p.tags,
+            u.id as author_id,
+            u.username as author_username,
+            u.nickname as author_nickname,
+            u.avatar_url as author_avatar_url,
+            <if test="currentUserId != null">
+                CASE WHEN EXISTS (
+                    SELECT 1 FROM post_likes pl
+                    WHERE pl.post_id = p.id AND pl.user_id = #{currentUserId}
+                ) THEN TRUE ELSE FALSE END as liked,
+                CASE WHEN EXISTS (
+                    SELECT 1 FROM post_favorites pf2
+                    WHERE pf2.post_id = p.id AND pf2.user_id = #{currentUserId}
+                ) THEN TRUE ELSE FALSE END as favorited,
+                CASE WHEN EXISTS (
+                    SELECT 1 FROM user_follows uf
+                    WHERE uf.follower_id = #{currentUserId} AND uf.following_id = p.user_id
+                ) THEN TRUE ELSE FALSE END as followed,
+                CASE WHEN EXISTS (
+                    SELECT 1 FROM user_follows uf
+                    WHERE uf.follower_id = p.user_id AND uf.following_id = #{currentUserId}
+                ) THEN TRUE ELSE FALSE END as follow_me
+            </if>
+            <if test="currentUserId == null">
+                FALSE as liked,
+                FALSE as favorited,
+                FALSE as followed,
+                FALSE as follow_me
+            </if>
+        FROM posts p
+        INNER JOIN post_favorites pf ON p.id = pf.post_id
+        INNER JOIN users u ON p.user_id = u.id
+        WHERE pf.user_id = #{userId}
+          AND p.status = 1
+          AND p.visibility = 1
+        ORDER BY pf.created_at DESC
+    </select>
+
+    <!-- 统计用户收藏的帖子数量 -->
+    <select id="countUserFavorites" resultType="long">
+        SELECT COUNT(*)
+        FROM post_favorites pf
+        INNER JOIN posts p ON pf.post_id = p.id
+        WHERE pf.user_id = #{userId}
+          AND p.status = 1
+          AND p.visibility = 1
+    </select>
+
+    <!-- 查询用户浏览历史帖子 -->
+    <select id="findUserBrowsingHistory" resultMap="postListResultMap">
+        SELECT
+            p.id, p.user_id, p.title, p.content, p.summary, p.cover_image_url,
+            p.view_count, p.like_count, p.favorite_count, p.comment_count, p.status, p.visibility,
+            p.is_top, p.published_at, p.created_at, p.updated_at,
+            p.faction, p.region, p.server, p.body_type, p.gameplay,
+            p.target, p.contact_detail, p.image_urls, p.tags,
+            u.id as author_id,
+            u.username as author_username,
+            u.nickname as author_nickname,
+            u.avatar_url as author_avatar_url,
+            <if test="userId != null">
+                CASE WHEN EXISTS (
+                    SELECT 1 FROM post_likes pl
+                    WHERE pl.post_id = p.id AND pl.user_id = #{userId}
+                ) THEN TRUE ELSE FALSE END as liked,
+                CASE WHEN EXISTS (
+                    SELECT 1 FROM post_favorites pf
+                    WHERE pf.post_id = p.id AND pf.user_id = #{userId}
+                ) THEN TRUE ELSE FALSE END as favorited,
+                CASE WHEN EXISTS (
+                    SELECT 1 FROM user_follows uf
+                    WHERE uf.follower_id = #{userId} AND uf.following_id = p.user_id
+                ) THEN TRUE ELSE FALSE END as followed,
+                CASE WHEN EXISTS (
+                    SELECT 1 FROM user_follows uf
+                    WHERE uf.follower_id = p.user_id AND uf.following_id = #{userId}
+                ) THEN TRUE ELSE FALSE END as follow_me
+            </if>
+            <if test="userId == null">
+                FALSE as liked,
+                FALSE as favorited,
+                FALSE as followed,
+                FALSE as follow_me
+            </if>
+        FROM posts p
+        INNER JOIN user_browsing_history uvh ON p.id = uvh.post_id
+        INNER JOIN users u ON p.user_id = u.id
+        WHERE uvh.user_id = #{userId}
+          AND p.status = 1
+          AND p.visibility = 1
+        ORDER BY uvh.created_at DESC
+    </select>
+
+    <!-- 统计用户浏览历史数量 -->
+    <select id="countUserBrowsingHistory" resultType="long">
+        SELECT COUNT(*)
+        FROM user_browsing_history uvh
+        INNER JOIN posts p ON uvh.post_id = p.id
+        WHERE uvh.user_id = #{userId}
+          AND p.status = 1
+          AND p.visibility = 1
+    </select>
+
+    <!-- ========== 互动通知查询 ========== -->
+
+    <!-- 互动通知结果映射（显式指定javaType，避免UNION查询中JDBC驱动将数值误报为DECIMAL/DOUBLE） -->
+    <resultMap id="interactionNotificationMap" type="com.icecream.backend.dto.response.InteractionNotification">
+        <result property="type" column="type" javaType="String"/>
+        <result property="fromUserId" column="from_user_id" javaType="Long"/>
+        <result property="fromNickname" column="from_nickname" javaType="String"/>
+        <result property="fromAvatarUrl" column="from_avatar_url" javaType="String"/>
+        <result property="targetId" column="target_id" javaType="Long"/>
+        <result property="targetTitle" column="target_title" javaType="String"/>
+        <result property="postId" column="post_id" javaType="Long"/>
+        <result property="createdAt" column="created_at" javaType="java.time.LocalDateTime"/>
+    </resultMap>
+
+    <!-- 查询对当前用户内容的互动列表（帖子点赞 + 评论点赞 + 帖子收藏，UNION合并按时间倒序） -->
+    <select id="findInteractionsOnMyContent" resultMap="interactionNotificationMap">
+        SELECT * FROM (
+            SELECT
+                'post_like' as type,
+                u.id as from_user_id,
+                u.nickname as from_nickname,
+                u.avatar_url as from_avatar_url,
+                p.id as target_id,
+                COALESCE(p.title, '') as target_title,
+                p.id as post_id,
+                pl.created_at
+            FROM post_likes pl
+            INNER JOIN users u ON pl.user_id = u.id
+            INNER JOIN posts p ON pl.post_id = p.id
+            WHERE p.user_id = #{userId} AND pl.user_id != #{userId}
+
+            UNION ALL
+
+            SELECT
+                'comment_like' as type,
+                u.id as from_user_id,
+                u.nickname as from_nickname,
+                u.avatar_url as from_avatar_url,
+                c.id as target_id,
+                COALESCE(SUBSTRING(c.content, 1, 100), '') as target_title,
+                c.post_id as post_id,
+                cl.created_at
+            FROM comment_likes cl
+            INNER JOIN users u ON cl.user_id = u.id
+            INNER JOIN comments c ON cl.comment_id = c.id
+            WHERE c.user_id = #{userId} AND cl.user_id != #{userId}
+
+            UNION ALL
+
+            SELECT
+                'post_favorite' as type,
+                u.id as from_user_id,
+                u.nickname as from_nickname,
+                u.avatar_url as from_avatar_url,
+                p.id as target_id,
+                COALESCE(p.title, '') as target_title,
+                p.id as post_id,
+                pf.created_at
+            FROM post_favorites pf
+            INNER JOIN users u ON pf.user_id = u.id
+            INNER JOIN posts p ON pf.post_id = p.id
+            WHERE p.user_id = #{userId} AND pf.user_id != #{userId}
+        ) AS interactions
+        ORDER BY created_at DESC
+    </select>
+
+    <!-- 统计对当前用户内容的互动数量 -->
+    <select id="countInteractionsOnMyContent" resultType="long">
+        SELECT COUNT(*) FROM (
+            SELECT pl.user_id
+            FROM post_likes pl
+            INNER JOIN posts p ON pl.post_id = p.id
+            WHERE p.user_id = #{userId} AND pl.user_id != #{userId}
+
+            UNION ALL
+
+            SELECT cl.user_id
+            FROM comment_likes cl
+            INNER JOIN comments c ON cl.comment_id = c.id
+            WHERE c.user_id = #{userId} AND cl.user_id != #{userId}
+
+            UNION ALL
+
+            SELECT pf.user_id
+            FROM post_favorites pf
+            INNER JOIN posts p ON pf.post_id = p.id
+            WHERE p.user_id = #{userId} AND pf.user_id != #{userId}
+        ) AS interactions
+    </select>
+
+    <!-- ========== 全文搜索 ========== -->
+
+    <!-- 根据关键词搜索帖子（单字走LIKE模糊匹配，多字走FULLTEXT全文搜索） -->
+    <select id="searchByKeyword" parameterType="com.icecream.backend.dto.request.PostSearchRequest" resultMap="postListResultMap">
+        SELECT
+            p.id, p.user_id, p.title, p.content, p.summary, p.cover_image_url,
+            p.view_count, p.like_count, p.favorite_count, p.comment_count, p.status, p.visibility,
+            p.is_top, p.published_at, p.created_at, p.updated_at,
+            p.faction, p.region, p.server, p.body_type, p.gameplay,
+            p.target, p.contact_detail, p.image_urls, p.tags,
+            u.id as author_id,
+            u.username as author_username,
+            u.nickname as author_nickname,
+            u.avatar_url as author_avatar_url,
+            <if test="query.currentUserId != null">
+                CASE WHEN EXISTS (
+                    SELECT 1 FROM post_likes pl
+                    WHERE pl.post_id = p.id AND pl.user_id = #{query.currentUserId}
+                ) THEN TRUE ELSE FALSE END as liked,
+                CASE WHEN EXISTS (
+                    SELECT 1 FROM post_favorites pf
+                    WHERE pf.post_id = p.id AND pf.user_id = #{query.currentUserId}
+                ) THEN TRUE ELSE FALSE END as favorited,
+                CASE WHEN EXISTS (
+                    SELECT 1 FROM user_follows uf
+                    WHERE uf.follower_id = #{query.currentUserId} AND uf.following_id = p.user_id
+                ) THEN TRUE ELSE FALSE END as followed,
+                CASE WHEN EXISTS (
+                    SELECT 1 FROM user_follows uf
+                    WHERE uf.follower_id = p.user_id AND uf.following_id = #{query.currentUserId}
+                ) THEN TRUE ELSE FALSE END as follow_me
+            </if>
+            <if test="query.currentUserId == null">
+                FALSE as liked,
+                FALSE as favorited,
+                FALSE as followed,
+                FALSE as follow_me
+            </if>,
+            <choose>
+                <when test="query.keyword.length() == 1">0</when>
+                <otherwise>MATCH(p.title, p.content) AGAINST(#{query.keyword} IN BOOLEAN MODE)</otherwise>
+            </choose> AS relevance
+        FROM posts p
+        INNER JOIN users u ON p.user_id = u.id
+        WHERE
+        <choose>
+            <when test="query.keyword.length() == 1">
+                (p.title LIKE CONCAT('%', #{query.keyword}, '%') OR p.content LIKE CONCAT('%', #{query.keyword}, '%'))
+            </when>
+            <otherwise>
+                MATCH(p.title, p.content) AGAINST(#{query.keyword} IN BOOLEAN MODE)
+            </otherwise>
+        </choose>
+          AND p.status = 1
+          AND p.visibility = 1
+        <if test="query.faction != null and query.faction != ''">
+            AND p.faction = #{query.faction}
+        </if>
+        <if test="query.region != null and query.region != ''">
+            AND p.region = #{query.region}
+        </if>
+        <if test="query.server != null and query.server != ''">
+            AND p.server = #{query.server}
+        </if>
+        <if test="query.bodyType != null and query.bodyType != ''">
+            AND p.body_type = #{query.bodyType}
+        </if>
+        <if test="query.gameplay != null and query.gameplay != ''">
+            AND p.gameplay = #{query.gameplay}
+        </if>
+        <choose>
+            <when test="query.keyword.length() == 1">
+                ORDER BY p.published_at DESC
+            </when>
+            <otherwise>
+                ORDER BY relevance DESC, p.published_at DESC
+            </otherwise>
+        </choose>
+    </select>
+
+    <!-- 统计关键词搜索结果总数 -->
+    <select id="countByKeyword" parameterType="com.icecream.backend.dto.request.PostSearchRequest" resultType="long">
+        SELECT COUNT(*)
+        FROM posts p
+        WHERE
+        <choose>
+            <when test="query.keyword.length() == 1">
+                (p.title LIKE CONCAT('%', #{query.keyword}, '%') OR p.content LIKE CONCAT('%', #{query.keyword}, '%'))
+            </when>
+            <otherwise>
+                MATCH(p.title, p.content) AGAINST(#{query.keyword} IN BOOLEAN MODE)
+            </otherwise>
+        </choose>
+          AND p.status = 1
+          AND p.visibility = 1
+        <if test="query.faction != null and query.faction != ''">
+            AND p.faction = #{query.faction}
+        </if>
+        <if test="query.region != null and query.region != ''">
+            AND p.region = #{query.region}
+        </if>
+        <if test="query.server != null and query.server != ''">
+            AND p.server = #{query.server}
+        </if>
+        <if test="query.bodyType != null and query.bodyType != ''">
+            AND p.body_type = #{query.bodyType}
+        </if>
+        <if test="query.gameplay != null and query.gameplay != ''">
+            AND p.gameplay = #{query.gameplay}
+        </if>
+    </select>
+
+</mapper>

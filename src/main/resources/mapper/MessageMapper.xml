@@ -1,0 +1,88 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.icecream.backend.mapper.MessageMapper">
+
+    <!-- 结果映射 -->
+    <resultMap id="messageResultMap" type="com.icecream.backend.model.Message">
+        <id property="id" column="id"/>
+        <result property="conversationId" column="conversation_id"/>
+        <result property="senderId" column="sender_id"/>
+        <result property="content" column="content"/>
+        <result property="type" column="type"/>
+        <result property="status" column="status"/>
+        <result property="createdAt" column="created_at"/>
+        <association property="sender" javaType="com.icecream.backend.model.User">
+            <id property="id" column="sender_user_id"/>
+            <result property="username" column="sender_username"/>
+            <result property="nickname" column="sender_nickname"/>
+            <result property="avatarUrl" column="sender_avatar_url"/>
+        </association>
+    </resultMap>
+
+    <!-- 根据ID查询消息 -->
+    <select id="findById" resultMap="messageResultMap">
+        SELECT
+            m.id, m.conversation_id, m.sender_id, m.content, m.type, m.status, m.created_at,
+            u.id as sender_user_id,
+            u.username as sender_username,
+            u.nickname as sender_nickname,
+            u.avatar_url as sender_avatar_url
+        FROM messages m
+        INNER JOIN users u ON m.sender_id = u.id
+        WHERE m.id = #{id}
+    </select>
+
+    <!-- 查询会话的消息列表（按时间倒序，分页由PageHelper处理） -->
+    <select id="findByConversationId" resultMap="messageResultMap">
+        SELECT
+            m.id, m.conversation_id, m.sender_id, m.content, m.type, m.status, m.created_at,
+            u.id as sender_user_id,
+            u.username as sender_username,
+            u.nickname as sender_nickname,
+            u.avatar_url as sender_avatar_url
+        FROM messages m
+        INNER JOIN users u ON m.sender_id = u.id
+        WHERE m.conversation_id = #{conversationId}
+          AND m.status = 1
+        ORDER BY m.created_at DESC
+    </select>
+
+    <!-- 统计会话的消息数 -->
+    <select id="countByConversationId" resultType="long">
+        SELECT COUNT(*)
+        FROM messages
+        WHERE conversation_id = #{conversationId}
+          AND status = 1
+    </select>
+
+    <!-- 统计会话中某用户未读消息数 -->
+    <select id="countUnread" resultType="long">
+        SELECT COUNT(*)
+        FROM messages
+        WHERE conversation_id = #{conversationId}
+          AND sender_id != #{userId}
+          AND status = 1
+          AND id > #{lastReadMessageId}
+    </select>
+
+    <!-- 插入消息 -->
+    <insert id="insert" parameterType="com.icecream.backend.model.Message" useGeneratedKeys="true" keyProperty="id">
+        INSERT INTO messages (conversation_id, sender_id, content, type, status)
+        VALUES (#{conversationId}, #{senderId}, #{content}, #{type}, #{status})
+    </insert>
+
+    <!-- 撤回消息（软删除） -->
+    <update id="softDelete">
+        UPDATE messages
+        SET status = 0
+        WHERE id = #{id}
+    </update>
+
+    <!-- 批量撤回会话下的所有消息 -->
+    <update id="deleteByConversationId">
+        UPDATE messages
+        SET status = 0
+        WHERE conversation_id = #{conversationId}
+    </update>
+
+</mapper>

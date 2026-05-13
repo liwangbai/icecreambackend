@@ -1,0 +1,131 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.icecream.backend.mapper.TagMapper">
+
+    <!-- 标签结果映射 -->
+    <resultMap id="tagResultMap" type="com.icecream.backend.model.Tag">
+        <id property="id" column="id"/>
+        <result property="name" column="name"/>
+        <result property="description" column="description"/>
+        <result property="color" column="color"/>
+        <result property="icon" column="icon"/>
+        <result property="isActive" column="is_active"/>
+        <result property="useCount" column="use_count"/>
+        <result property="sortOrder" column="sort_order"/>
+        <result property="createdBy" column="created_by"/>
+        <result property="createdAt" column="created_at"/>
+        <result property="updatedAt" column="updated_at"/>
+    </resultMap>
+
+    <!-- ========== 基本CRUD操作（仅管理员） ========== -->
+
+    <!-- 根据ID查询标签 -->
+    <select id="findById" resultMap="tagResultMap">
+        SELECT * FROM tags
+        WHERE id = #{id}
+    </select>
+
+    <!-- 根据名称查询标签 -->
+    <select id="findByName" resultMap="tagResultMap">
+        SELECT * FROM tags
+        WHERE name = #{name}
+    </select>
+
+    <!-- 查询所有标签（仅管理员使用） -->
+    <select id="findAll" resultMap="tagResultMap">
+        SELECT * FROM tags
+        ORDER BY sort_order ASC, id ASC
+    </select>
+
+    <!-- 查询所有启用的标签 -->
+    <select id="findActiveTags" resultMap="tagResultMap">
+        SELECT * FROM tags
+        WHERE is_active = TRUE
+        ORDER BY sort_order ASC, use_count DESC
+    </select>
+
+    <!-- 插入新标签 -->
+    <insert id="insert" parameterType="com.icecream.backend.model.Tag" useGeneratedKeys="true" keyProperty="id">
+        INSERT INTO tags (
+            name, description, color, icon, is_active, use_count, sort_order, created_by
+        ) VALUES (
+            #{name}, #{description}, #{color}, #{icon}, #{isActive}, #{useCount}, #{sortOrder}, #{createdBy}
+        )
+    </insert>
+
+    <!-- 更新标签信息 -->
+    <update id="update" parameterType="com.icecream.backend.model.Tag">
+        UPDATE tags
+        <set>
+            <if test="name != null">name = #{name},</if>
+            <if test="description != null">description = #{description},</if>
+            <if test="color != null">color = #{color},</if>
+            <if test="icon != null">icon = #{icon},</if>
+            <if test="isActive != null">is_active = #{isActive},</if>
+            <if test="useCount != null">use_count = #{useCount},</if>
+            <if test="sortOrder != null">sort_order = #{sortOrder},</if>
+            <if test="createdBy != null">created_by = #{createdBy},</if>
+            updated_at = NOW()
+        </set>
+        WHERE id = #{id}
+    </update>
+
+    <!-- 根据ID删除标签 -->
+    <delete id="delete">
+        DELETE FROM tags
+        WHERE id = #{id}
+    </delete>
+
+    <!-- ========== 业务方法 ========== -->
+
+    <!-- 增加标签使用次数 -->
+    <update id="incrementUseCount">
+        UPDATE tags
+        SET use_count = use_count + 1,
+            updated_at = NOW()
+        WHERE id = #{tagId}
+    </update>
+
+    <!-- 减少标签使用次数 -->
+    <update id="decrementUseCount">
+        UPDATE tags
+        SET use_count = GREATEST(use_count - 1, 0),
+            updated_at = NOW()
+        WHERE id = #{tagId}
+    </update>
+
+    <!-- ========== 帖子标签关联操作 ========== -->
+
+    <!-- 添加帖子标签关联 -->
+    <insert id="insertPostTag">
+        INSERT IGNORE INTO post_tags (post_id, tag_id)
+        VALUES (#{postId}, #{tagId})
+    </insert>
+
+    <!-- 根据帖子ID删除所有标签关联 -->
+    <delete id="deletePostTagsByPostId">
+        DELETE FROM post_tags
+        WHERE post_id = #{postId}
+    </delete>
+
+    <!-- 根据帖子ID查询关联的标签 -->
+    <select id="findTagsByPostId" resultMap="tagResultMap">
+        SELECT t.*
+        FROM tags t
+        INNER JOIN post_tags pt ON t.id = pt.tag_id
+        WHERE pt.post_id = #{postId}
+          AND t.is_active = TRUE
+        ORDER BY t.sort_order ASC
+    </select>
+
+    <!-- ========== 热门标签查询 ========== -->
+
+    <!-- 查询热门标签（按使用次数降序） -->
+    <select id="findPopularTags" resultMap="tagResultMap">
+        SELECT * FROM tags
+        WHERE is_active = TRUE
+        ORDER BY use_count DESC
+        LIMIT #{limit}
+    </select>
+
+</mapper>

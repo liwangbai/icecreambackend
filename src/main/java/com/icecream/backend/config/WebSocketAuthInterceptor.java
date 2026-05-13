@@ -1,0 +1,69 @@
+package com.icecream.backend.config;
+
+import com.icecream.backend.security.JwtTokenProvider;
+import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
+import org.springframework.messaging.Message;
+import org.springframework.messaging.MessageChannel;
+import org.springframework.messaging.simp.stomp.StompCommand;
+import org.springframework.messaging.simp.stomp.StompHeaderAccessor;
+import org.springframework.messaging.support.ChannelInterceptor;
+import org.springframework.messaging.support.MessageHeaderAccessor;
+import org.springframework.security.core.Authentication;
+import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
+import org.springframework.security.core.authority.SimpleGrantedAuthority;
+import org.springframework.security.core.context.SecurityContextHolder;
+import org.springframework.security.core.userdetails.User;
+import org.springframework.security.core.userdetails.UserDetails;
+import org.springframework.stereotype.Component;
+
+import java.util.Collections;
+
+/**
+ * STOMP 消息通道拦截器
+ * 在 STOMP CONNECT 时验证 JWT token 并设置认证信息
+ */
+@Slf4j
+@Component
+@RequiredArgsConstructor
+public class WebSocketAuthInterceptor implements ChannelInterceptor {
+
+    private final JwtTokenProvider jwtTokenProvider;
+
+    @Override
+    public Message<?> preSend(Message<?> message, MessageChannel channel) {
+        StompHeaderAccessor accessor = MessageHeaderAccessor.getAccessor(message, StompHeaderAccessor.class);
+
+        if (accessor != null && StompCommand.CONNECT.equals(accessor.getCommand())) {
+            String authHeader = accessor.getFirstNativeHeader("Authorization");
+            if (authHeader != null && authHeader.startsWith("Bearer ")) {
+                String token = authHeader.substring(7);
+                try {
+                    if (jwtTokenProvider.validateToken(token)) {
+                        String username = jwtTokenProvider.getUsernameFromToken(token);
+                        String role = jwtTokenProvider.getRoleFromToken(token);
+
+                        UserDetails userDetails = User.builder()
+                                .username(username)
+                                .password("")
+                                .authorities(Collections.singletonList(new SimpleGrantedAuthority(role)))
+                                .build();
+
+                        UsernamePasswordAuthenticationToken auth =
+                                new UsernamePasswordAuthenticationToken(userDetails, null, userDetails.getAuthorities());
+                        accessor.setUser(auth);
+                        SecurityContextHolder.getContext().setAuthentication(auth);
+
+                        log.debug("WebSocket认证成功: username={}", username);
+                    }
+                } catch (Exception e) {
+                    log.warn("WebSocket认证失败: {}", e.getMessage());
+                }
+            }
+        } else if (accessor != null && accessor.getUser() != null) {
+            // 非 CONNECT 帧从 STOMP 会话恢复认证信息到当前线程
+            SecurityContextHolder.getContext().setAuthentication((Authentication) accessor.getUser());
+        }
+        return message;
+    }
+}
