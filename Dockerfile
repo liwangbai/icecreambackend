@@ -33,8 +33,8 @@ EXPOSE 8080
 ENTRYPOINT ["/sbin/tini", "--"]
 CMD java \
     -XX:+UseContainerSupport \
-    -XX:MaxRAMPercentage=75.0 \
-    -XX:InitialRAMPercentage=50.0 \
+    -XX:MaxRAMPercentage=65.0 \
+    -XX:InitialRAMPercentage=40.0 \
     -XX:+UseG1GC \
     -XX:MaxGCPauseMillis=200 \
     -XX:+ExitOnOutOfMemoryError \
