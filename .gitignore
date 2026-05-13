@@ -17,6 +17,7 @@ logs/
 *.yaml
 !application.yml
 !application-*.yml
+!docker-compose.yml
 !.env.example
 .env
 *.key
@@ -55,6 +56,9 @@ test-output/
 # 临时文件
 tmp/
 temp/
+
+# Claude Code
+.claude/
 
 # 其他
 *.orig

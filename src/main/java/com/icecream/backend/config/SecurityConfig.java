@@ -3,6 +3,7 @@ package com.icecream.backend.config;
 import com.icecream.backend.security.JwtAuthenticationFilter;
 import jakarta.servlet.http.HttpServletResponse;
 import lombok.RequiredArgsConstructor;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.http.HttpMethod;
@@ -21,6 +22,7 @@ import org.springframework.web.cors.CorsConfigurationSource;
 import org.springframework.web.cors.UrlBasedCorsConfigurationSource;
 
 import java.util.Arrays;
+import java.util.List;
 
 @Configuration
 @EnableWebSecurity
@@ -29,8 +31,19 @@ public class SecurityConfig {
 
     private final JwtAuthenticationFilter jwtAuthenticationFilter;
 
+    @Value("${cors.allowed-origins:*}")
+    private String allowedOrigins;
+
+    @Value("${security.require-ssl:false}")
+    private boolean requireSsl;
+
     @Bean
     public SecurityFilterChain filterChain(HttpSecurity http) throws Exception {
+        // 生产环境强制HTTPS
+        if (requireSsl) {
+            http.requiresChannel(channel -> channel.anyRequest().requiresSecure());
+        }
+
         http
             .cors(cors -> cors.configurationSource(corsConfigurationSource()))
             .csrf(csrf -> csrf.disable())
@@ -71,6 +84,7 @@ public class SecurityConfig {
                 // WebSocket端点
                 .requestMatchers("/ws/**").permitAll()
                 .requestMatchers("/ws").permitAll()
+                // Swagger（仅在非生产环境开放，生产环境由 springdoc 配置禁用）
                 .requestMatchers(
                         "/swagger-ui/**",
                         "/swagger-ui.html",
@@ -95,7 +109,12 @@ public class SecurityConfig {
     @Bean
     public CorsConfigurationSource corsConfigurationSource() {
         CorsConfiguration configuration = new CorsConfiguration();
-        configuration.setAllowedOriginPatterns(Arrays.asList("*"));
+
+        if ("*".equals(allowedOrigins) || allowedOrigins.isEmpty()) {
+            configuration.setAllowedOriginPatterns(List.of("*"));
+        } else {
+            configuration.setAllowedOriginPatterns(Arrays.asList(allowedOrigins.split(",")));
+        }
         configuration.setAllowedMethods(Arrays.asList("GET", "POST", "PUT", "DELETE", "OPTIONS"));
         configuration.setAllowedHeaders(Arrays.asList("*"));
         configuration.setAllowCredentials(true);
