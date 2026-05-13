@@ -55,7 +55,13 @@ mybatis:
 # JWT生产配置（必须通过环境变量设置）
 jwt:
   secret: ${JWT_SECRET:}
-  expiration: ${JWT_EXPIRATION:86400000}
+  access-token-expiration: ${JWT_ACCESS_EXPIRATION:1800000}
+  refresh-token-expiration: ${JWT_REFRESH_EXPIRATION:604800000}
+  issuer: ${JWT_ISSUER:icecream-backend}
+
+# 安全配置
+security:
+  require-ssl: true
 
 # CORS生产配置
 cors:
@@ -71,7 +77,7 @@ file:
     dir: ${FILE_UPLOAD_DIR:./uploads}
     max-size: 10MB
 
-# 日志生产配置
+# 日志生产配置（JSON格式，便于日志采集）
 logging:
   level:
     com.icecream.backend: INFO
@@ -79,11 +85,21 @@ logging:
     org.mybatis: WARN
     org.springframework.web: WARN
     org.springframework.security: WARN
+  pattern:
+    console: '{"@timestamp":"%d{yyyy-MM-dd HH:mm:ss.SSS}","level":"%p","thread":"%t","logger":"%c","message":"%msg"}%n'
+    file: '{"@timestamp":"%d{yyyy-MM-dd HH:mm:ss.SSS}","level":"%p","thread":"%t","logger":"%c","message":"%msg"}%n'
   file:
     name: logs/application-prod.log
     max-size: 10MB
     max-history: 30
     total-size-cap: 1GB
+
+# SpringDoc生产配置（关闭Swagger）
+springdoc:
+  api-docs:
+    enabled: false
+  swagger-ui:
+    enabled: false
 
 # Actuator生产配置（安全限制）
 management:
@@ -103,6 +119,9 @@ server:
   port: ${SERVER_PORT:8080}
   servlet:
     context-path: /
+  error:
+    include-stacktrace: never
+    include-exception: false
   compression:
     enabled: true
     mime-types: text/html,text/xml,text/plain,text/css,text/javascript,application/javascript,application/json

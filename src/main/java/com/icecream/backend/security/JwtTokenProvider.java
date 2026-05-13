@@ -25,7 +25,7 @@ import java.util.stream.Collectors;
 @Component
 public class JwtTokenProvider {
 
-    @Value("${jwt.secret:defaultSecretKeyForDevelopmentOnlyChangeThisInProduction}")
+    @Value("${jwt.secret:}")
     private String jwtSecret;
 
     @Value("${jwt.access-token-expiration:1800000}") // 30分钟，单位毫秒
@@ -233,6 +233,11 @@ public class JwtTokenProvider {
      * @return 签名密钥
      */
     private SecretKey getSigningKey() {
+        if (jwtSecret == null || jwtSecret.length() < 32) {
+            throw new IllegalStateException(
+                "JWT密钥长度不足（当前" + (jwtSecret == null ? 0 : jwtSecret.length())
+                + "字符），生产环境必须通过JWT_SECRET环境变量设置至少32字符的强密钥");
+        }
         byte[] keyBytes = jwtSecret.getBytes(StandardCharsets.UTF_8);
         return Keys.hmacShaKeyFor(keyBytes);
     }
