@@ -76,8 +76,8 @@ public class LocalFileUploadServiceImpl implements FileUploadService {
             }
         }
 
-        // 生成文件访问URL
-        String fileUrl = getFileUrl(storedFilename, category, userId);
+        // 生成文件访问URL（必须包含日期路径，与存储路径一致）
+        String fileUrl = buildUrlFromStoragePath(storagePath, storedFilename);
 
         // 构建响应
         FileUploadResponse response = FileUploadResponse.builder()
@@ -170,7 +170,8 @@ public class LocalFileUploadServiceImpl implements FileUploadService {
         // 构建文件信息
         return FileInfo.builder()
                 .filename(filename)
-                .fileUrl(getFileUrl(filename, category, userId))
+                .fileUrl(buildUrlFromStoragePath(
+                        Paths.get(filePath).getParent().toString(), filename))
                 .fileSize(file.length())
                 .fileType(Files.probeContentType(file.toPath()))
                 .lastModified(LocalDateTime.ofInstant(
@@ -286,6 +287,24 @@ public class LocalFileUploadServiceImpl implements FileUploadService {
 
         log.debug("生成存储路径: {}", path);
         return path;
+    }
+
+    /**
+     * 从存储路径构建文件访问URL（包含日期分层目录）
+     * 例: ./uploads/posts/2026/05/14/1 → /uploads/posts/2026/05/14/1/filename.jpg
+     */
+    private String buildUrlFromStoragePath(String storagePath, String filename) {
+        String urlPath = storagePath.replace("\\", "/");
+        if (urlPath.startsWith("./")) {
+            urlPath = urlPath.substring(1);
+        }
+        if (!urlPath.startsWith("/")) {
+            urlPath = "/" + urlPath;
+        }
+        if (!urlPath.endsWith("/")) {
+            urlPath += "/";
+        }
+        return urlPath + filename;
     }
 
     /**
