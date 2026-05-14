@@ -1,5 +1,6 @@
 package com.icecream.backend.model;
 
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import lombok.Data;
 import lombok.EqualsAndHashCode;
 
@@ -23,6 +24,7 @@ public class User extends BaseEntity {
     /**
      * 密码哈希值（BCrypt加密）
      */
+    @JsonIgnore
     private String passwordHash;
 
     /**
