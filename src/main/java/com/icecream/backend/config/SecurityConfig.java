@@ -81,6 +81,8 @@ public class SecurityConfig {
                 .requestMatchers(HttpMethod.GET, "/api/v1/users/{userId}/followers").permitAll()
                 .requestMatchers(HttpMethod.GET, "/api/v1/users/{userId}/following").permitAll()
                 .requestMatchers("/actuator/health", "/manage/health").permitAll()
+                // 上传文件（图片等静态资源，公开访问）
+                .requestMatchers(HttpMethod.GET, "/uploads/**").permitAll()
                 // WebSocket端点
                 .requestMatchers("/ws/**").permitAll()
                 .requestMatchers("/ws").permitAll()
